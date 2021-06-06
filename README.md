@@ -11,8 +11,8 @@ endpoints for PostgreSQL wire protocol, high-throughput schema-agnostic
 ingestion using InfluxDB Line Protocol, and a REST API for queries, bulk
 imports, and exports.
 
-# QuestDB.Net
-QuestDB.Net is a lightweight client library for QuestDB.
+# QuestDB.Net (C#)
+QuestDB.Net is a lightweight client library written in C# for QuestDB.
 It currently supports insertion through influxdb lineprotocol and Query using rest api.
 
 You can insert influx points or any measurement(Table) model.
