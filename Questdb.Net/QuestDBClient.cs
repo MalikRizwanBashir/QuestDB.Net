@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Questdb.Net
 {
-    public class QuestDBClient : IDisposable
+    public class QuestDBClient : IQuestDBClient, IDisposable
     {
         private readonly ApiClient _apiClient;
         private readonly ExceptionFactory _exceptionFactory;
@@ -96,7 +96,7 @@ namespace Questdb.Net
         /// Get the Query client.
         /// </summary>
         /// <returns>the new client instance for the Query API</returns>
-        public QueryApi GetQueryApi()
+        public IQueryApi GetQueryApi()
         {
             return new QueryApi(_options, _apiClient);
         }
@@ -106,7 +106,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="writeOptions">the configuration for a write client</param>
         /// <returns>the new client instance for the Write API</returns>
-        public WriteLineApi GetWriteApi(WriteOptions writeOptions)
+        public IWriteLineApi GetWriteApi(WriteOptions writeOptions)
         {
             var writeApi = new WriteLineApi(_options, writeOptions, this, _disposeNotification);
 
@@ -117,7 +117,7 @@ namespace Questdb.Net
         /// Get the Write client.
         /// </summary>
         /// <returns>the new client instance for the Write API</returns>
-        public WriteLineApi GetWriteApi()
+        public IWriteLineApi GetWriteApi()
         {
             return GetWriteApi(WriteOptions.CreateNew().Build());
         }

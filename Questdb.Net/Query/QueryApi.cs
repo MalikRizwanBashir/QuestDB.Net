@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Questdb.Net.Query
 {
-    public class QueryApi : AbstractQueryClient
+    public class QueryApi : AbstractQueryClient, IQueryApi
     {
         private readonly QuestdbClientOptions _options;
         private readonly ApiClient _apiClient;
@@ -26,12 +26,9 @@ namespace Questdb.Net.Query
 
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public async Task<string> QueryRawAsync(string query)
         {
@@ -47,12 +44,9 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public string QueryRaw(string query)
         {
@@ -69,12 +63,9 @@ namespace Questdb.Net.Query
 
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB and maps to QuestdbResponse
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public async Task<QuestdbResponse> QueryAsync(string query)
         {
@@ -90,12 +81,9 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB and maps to QuestdbResponse
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public QuestdbResponse Query(string query)
         {
@@ -111,12 +99,9 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public async Task<string> QueryCSVAsync(string query)
         {
@@ -132,12 +117,9 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
-        /// response to enumerable of objects of type <typeparamref name="T"/>.
+        /// Executes the query against the QuestDB
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <typeparam name="T">the type of measurement</typeparam>
+        /// <param name="query">the query to execute</param>
         /// <returns>Measurements which are matched the query</returns>
         public string QueryCSV(string query)
         {
@@ -154,11 +136,10 @@ namespace Questdb.Net.Query
 
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
+        /// Executes the query against the QuestDB and asynchronously maps
         /// response to enumerable of objects of type <typeparamref name="T"/>.
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
+        /// <param name="query">the query to execute</param>
         /// <typeparam name="T">the type of measurement</typeparam>
         /// <returns>Measurements which are matched the query</returns>
         public async Task<IEnumerable<T>> QueryEnumerableAsync<T>(string query)
@@ -171,11 +152,10 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously maps
+        /// Executes the query against the QuestDB and asynchronously maps
         /// response to enumerable of objects of type <typeparamref name="T"/>.
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="cancellationToken">cancellation token</param>
+        /// <param name="query">the query to execute</param>
         /// <typeparam name="T">the type of measurement</typeparam>
         /// <returns>Measurements which are matched the query</returns>
         public IEnumerable<T> QueryEnumerable<T>(string query)
@@ -188,12 +168,11 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously stream <see cref="FluxRecord"/>
+        /// Executes the query against the QuestDB and asynchronously stream <see cref="T"/>
         /// to <see cref="onNext"/> consumer.
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="org">specifies the source organization</param>
-        /// <param name="onNext">the callback to consume the FluxRecord result with capability</param>
+        /// <param name="query">the query to execute</param>
+        /// <param name="onNext">the callback to consume the T result with capability</param>
         /// <param name="onError">the callback to consume any error notification</param>
         /// <param name="onComplete">the callback to consume a notification about successfully end of stream</param>
         /// <returns>async task</returns>
@@ -212,12 +191,11 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously stream <see cref="T"/>
+        /// Executes the query against the QuestDB and asynchronously stream <see cref="T"/>
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="onNext">the callback to consume the FluxRecord result with capability</param>
+        /// <param name="query">the query to execute</param>
+        /// <param name="onNext">the callback to consume the T result with capability</param>
         /// <param name="onError">the callback to consume any error notification</param>
-        /// <param name="onComplete">the callback to consume a notification about successfully end of stream</param>
         /// <returns>async task</returns>
         public async Task QueryAsync<T>(string query, Action<ICancellable, T> onNext,
             Action<Exception> onError)
@@ -232,13 +210,11 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously stream <see cref="FluxRecord"/>
+        /// Executes the query against the QuestDB and asynchronously stream <see cref="T"/>
         /// to <see cref="onNext"/> consumer.
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="org">specifies the source organization</param>
-        /// <param name="onNext">the callback to consume the FluxRecord result with capability</param>
-        /// <param name="onError">the callback to consume any error notification</param>
+        /// <param name="query">the query to execute</param>
+        /// <param name="onNext">the callback to consume the T result with capability</param>
         /// <param name="onComplete">the callback to consume a notification about successfully end of stream</param>
         /// <returns>async task</returns>
         public async Task QueryAsync<T>(string query, Action<ICancellable, T> onNext,
@@ -254,14 +230,11 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Executes the Flux query against the QuestDB 2.0 and asynchronously stream <see cref="FluxRecord"/>
+        /// Executes the query against the QuestDB 2.0 and asynchronously stream <see cref="T"/>
         /// to <see cref="onNext"/> consumer.
         /// </summary>
-        /// <param name="query">the flux query to execute</param>
-        /// <param name="org">specifies the source organization</param>
-        /// <param name="onNext">the callback to consume the FluxRecord result with capability</param>
-        /// <param name="onError">the callback to consume any error notification</param>
-        /// <param name="onComplete">the callback to consume a notification about successfully end of stream</param>
+        /// <param name="query">the query to execute</param>
+        /// <param name="onNext">the callback to consume the T result with capability</param>
         /// <returns>async task</returns>
         public async Task QueryAsync<T>(string query, Action<ICancellable, T> onNext)
         {

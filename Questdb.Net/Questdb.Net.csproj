@@ -1,18 +1,37 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<OutputType>Library</OutputType>
+		<ApplicationIcon />
+		<StartupObject />
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description>Questdb.Net is a C# client library for QuestDB</Description>
+		<Copyright></Copyright>
+		<RepositoryUrl></RepositoryUrl>
+		<PackageTags></PackageTags>
+		<PackageId>Questdb.Net</PackageId>
+		<Authors></Authors>
+		<Company>Questdb.Net</Company>
+		<Product>Questdb.Net</Product>
+		<Version>1.0.1</Version>
+		<AssemblyVersion>1.0.1</AssemblyVersion>
+		<FileVersion>1.0.1</FileVersion>
+		<PackageProjectUrl>https://github.com/MalikRizwanBashir/QuestDB.Net</PackageProjectUrl>
+		<NeutralLanguage />
+		<PackageReleaseNotes>Initail release with ingestion using lineprototcol and query using rest APi</PackageReleaseNotes>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="18.0.0" />
-    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="5.0.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NodaTime" Version="3.0.3" />
-    <PackageReference Include="RestSharp" Version="106.11.7" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
-    <PackageReference Include="System.Reactive" Version="5.0.0" />
-    <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CsvHelper" Version="18.0.0" />
+		<PackageReference Include="Microsoft.Extensions.ObjectPool" Version="5.0.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="NodaTime" Version="3.0.3" />
+		<PackageReference Include="RestSharp" Version="106.11.7" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+		<PackageReference Include="System.Reactive" Version="5.0.0" />
+		<PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
+	</ItemGroup>
 
 </Project>

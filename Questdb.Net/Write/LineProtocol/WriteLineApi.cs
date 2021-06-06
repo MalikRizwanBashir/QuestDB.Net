@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Questdb.Net.Write
 {
-    public class WriteLineApi : BaseWriteApi
+    public class WriteLineApi : BaseWriteApi, IWriteLineApi
     {
         private readonly Subject<IObservable<BatchWriteData>> _flush = new Subject<IObservable<BatchWriteData>>();
 

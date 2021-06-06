@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v5.0": {
-      "Questdb.Net/1.0.0": {
+      "Questdb.Net/1.0.1": {
         "dependencies": {
           "CsvHelper": "18.0.0",
           "Microsoft.Extensions.ObjectPool": "5.0.1",
@@ -205,7 +205,7 @@
     }
   },
   "libraries": {
-    "Questdb.Net/1.0.0": {
+    "Questdb.Net/1.0.1": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
