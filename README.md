@@ -3,6 +3,8 @@
 </div>
 <p>&nbsp;</p>
 
+[![Nuget](https://img.shields.io/nuget/v/Questdb.Net)](https://www.nuget.org/packages/Questdb.Net/)
+
 # QuestDB
 
 QuestDB is a high-performance, open-source SQL database for applications in
