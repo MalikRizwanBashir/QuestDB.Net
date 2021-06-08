@@ -23,10 +23,25 @@ You can Query raw response or QuestDbResponseModel or directly to measurement(Ta
 
 #Examples:
 
-Write using point:
+#### Intialize Client yourself
+
 ```csharp
 QuestDBClient client = new QuestDBClient("http://127.0.0.1");
+```
 
+#### Intialize Client through dependency injection
+
+Write the code given below in ConfigureServices method in Startup file
+```csharp
+services.AddQuestDb(); //load configurations from configuration manager using section name "questdb"
+OR
+services.AddQuestDb("http://127.0.0.1");
+```
+Now you can Inject IQuestDBClient in constructor
+
+
+Write using point:
+```csharp
 var writeApi = client.GetWriteApi();
 var point = PointData.Measurement("trades")
                     .Tag("name", "tagevalue")
