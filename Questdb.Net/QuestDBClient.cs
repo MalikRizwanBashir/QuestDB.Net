@@ -14,6 +14,9 @@ namespace Questdb.Net
         private readonly ApiClient _apiClient;
         private readonly ExceptionFactory _exceptionFactory;
         private readonly GzipHandler _gzipHandler;
+        private readonly WriteOptions _writeOptions;
+        private readonly IQueryApi _queryAPI;
+        private readonly IWriteLineApi _writeAPI;
 
         private readonly QuestdbClientOptions _options;
 
@@ -21,8 +24,12 @@ namespace Questdb.Net
 
         #region ctor
 
+        /// <summary>
+        /// Load configurations from configuration file using key "questdb"
+        /// </summary>
         public QuestDBClient()
         {
+            _writeOptions = WriteOptions.CreateNew().Build();
             _options = QuestdbClientOptions.Builder
                 .CreateNew()
                 .LoadConfig()
@@ -32,10 +39,18 @@ namespace Questdb.Net
             _exceptionFactory = (methodName, response) =>
                 !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
             _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+
+            _queryAPI = new QueryApi(_options, _apiClient);
+            _writeAPI = new WriteLineApi(_options, _writeOptions, this, _disposeNotification);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="host">Server URL(IP)</param>
         public QuestDBClient(string host)
         {
+            _writeOptions = WriteOptions.CreateNew().Build();
             _options = QuestdbClientOptions.Builder
                 .CreateNew()
                 .Url(host)
@@ -45,49 +60,97 @@ namespace Questdb.Net
             _exceptionFactory = (methodName, response) =>
                 !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
             _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+
+            _queryAPI = new QueryApi(_options, _apiClient);
+            _writeAPI = new WriteLineApi(_options, _writeOptions, this, _disposeNotification);
         }
 
-        public QuestDBClient(string url, string username, char[] password)
+        /// <summary>
+        /// Load configurations from configuration file using key "questdb"
+        /// <param name="writeOptions">the configuration for a write client</param>
+        /// </summary>
+        public QuestDBClient(WriteOptions writeOptions)
         {
+            _writeOptions = writeOptions;
             _options = QuestdbClientOptions.Builder
                 .CreateNew()
-                .Url(url)
-                .Authenticate(username, password)
+                .LoadConfig()
                 .Build();
 
             _gzipHandler = new GzipHandler();
             _exceptionFactory = (methodName, response) =>
                 !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
             _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+
+            _queryAPI = new QueryApi(_options, _apiClient);
+            _writeAPI = new WriteLineApi(_options, _writeOptions, this, _disposeNotification);
         }
 
-        public QuestDBClient(string host, char[] token)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="writeOptions">the configuration for a write client</param>
+        /// <param name="host">Server URL(IP)</param>
+        public QuestDBClient(string host, WriteOptions writeOptions)
         {
+            _writeOptions = writeOptions;
             _options = QuestdbClientOptions.Builder
                 .CreateNew()
                 .Url(host)
-                .AuthenticateToken(token)
                 .Build();
 
             _gzipHandler = new GzipHandler();
             _exceptionFactory = (methodName, response) =>
                 !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
             _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+
+            _queryAPI = new QueryApi(_options, _apiClient);
+            _writeAPI = new WriteLineApi(_options, _writeOptions, this, _disposeNotification);
         }
 
-        public QuestDBClient(string url, string token)
-        {
-            _options = QuestdbClientOptions.Builder
-                .CreateNew()
-                .Url(url)
-                .AuthenticateToken(token)
-                .Build();
+        #region authentication not implemented yet
+        //public QuestDBClient(string url, string username, char[] password)
+        //{
+        //    _options = QuestdbClientOptions.Builder
+        //        .CreateNew()
+        //        .Url(url)
+        //        .Authenticate(username, password)
+        //        .Build();
 
-            _gzipHandler = new GzipHandler();
-            _exceptionFactory = (methodName, response) =>
-                !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
-            _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
-        }
+        //    _gzipHandler = new GzipHandler();
+        //    _exceptionFactory = (methodName, response) =>
+        //        !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
+        //    _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+        //}
+
+        //public QuestDBClient(string host, char[] token)
+        //{
+        //    _options = QuestdbClientOptions.Builder
+        //        .CreateNew()
+        //        .Url(host)
+        //        .AuthenticateToken(token)
+        //        .Build();
+
+        //    _gzipHandler = new GzipHandler();
+        //    _exceptionFactory = (methodName, response) =>
+        //        !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
+        //    _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+        //}
+
+        //public QuestDBClient(string url, string token)
+        //{
+        //    _options = QuestdbClientOptions.Builder
+        //        .CreateNew()
+        //        .Url(url)
+        //        .AuthenticateToken(token)
+        //        .Build();
+
+        //    _gzipHandler = new GzipHandler();
+        //    _exceptionFactory = (methodName, response) =>
+        //        !response.IsSuccessful ? HttpException.Create(response, response.Content) : null;
+        //    _apiClient = new ApiClient(_options, _exceptionFactory, _gzipHandler);
+        //}
+        #endregion
 
         #endregion
 
@@ -98,19 +161,7 @@ namespace Questdb.Net
         /// <returns>the new client instance for the Query API</returns>
         public IQueryApi GetQueryApi()
         {
-            return new QueryApi(_options, _apiClient);
-        }
-
-        /// <summary>
-        /// Get the Write client.
-        /// </summary>
-        /// <param name="writeOptions">the configuration for a write client</param>
-        /// <returns>the new client instance for the Write API</returns>
-        public IWriteLineApi GetWriteApi(WriteOptions writeOptions)
-        {
-            var writeApi = new WriteLineApi(_options, writeOptions, this, _disposeNotification);
-
-            return writeApi;
+            return _queryAPI;
         }
 
         /// <summary>
@@ -119,7 +170,7 @@ namespace Questdb.Net
         /// <returns>the new client instance for the Write API</returns>
         public IWriteLineApi GetWriteApi()
         {
-            return GetWriteApi(WriteOptions.CreateNew().Build());
+            return _writeAPI;
         }
 
         /// <summary>
@@ -128,7 +179,7 @@ namespace Questdb.Net
         /// <para>Currently only the "Write" and "Query" endpoints supports the Gzip compression.</para>
         /// </summary>
         /// <returns></returns>
-        public QuestDBClient EnableGzip()
+        public IQuestDBClient EnableGzip()
         {
             _gzipHandler.EnableGzip();
 
@@ -139,7 +190,7 @@ namespace Questdb.Net
         /// Disable Gzip compress for http request body.
         /// </summary>
         /// <returns>this</returns>
-        public QuestDBClient DisableGzip()
+        public IQuestDBClient DisableGzip()
         {
             _gzipHandler.DisableGzip();
 

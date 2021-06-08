@@ -220,9 +220,9 @@ namespace Questdb.Net.Config
             /// Configure Builder via App.config.
             /// </summary>
             /// <returns><see cref="Builder"/></returns>
-            internal Builder LoadConfig()
+            internal Builder LoadConfig(string section = "questdb")
             {
-                var config = (ConnectionSettings)ConfigurationManager.GetSection("questdb");
+                var config = (ConnectionSettings)ConfigurationManager.GetSection(section);
 
                 var url = config?.Url;
                 var database = config?.Database;

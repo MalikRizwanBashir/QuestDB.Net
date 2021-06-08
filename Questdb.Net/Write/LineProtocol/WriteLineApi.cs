@@ -274,35 +274,6 @@ namespace Questdb.Net.Write
 
         #endregion
 
-        private async Task WriteDataAsync(IEnumerable<BatchWriteData> data)
-        {
-            var sb = new StringBuilder("");
-
-            foreach (var item in data)
-            {
-                var lineProtocol = item.FormatData();
-
-                if (string.IsNullOrEmpty(lineProtocol))
-                {
-                    continue;
-                }
-
-                sb.Append(lineProtocol);
-                sb.Append("\n");
-            }
-
-            if (sb.Length == 0)
-            {
-                Trace.WriteLine($"The writes: {data} doesn't contains any Line Protocol, skipping");
-                return;
-            }
-
-            // remove last \n
-            sb.Remove(sb.Length - 1, 1);
-
-            await _tcpService.SendAsync(Encoding.UTF8.GetBytes(sb.ToString()));
-        }
-
         public new void Dispose()
         {
             _unsubscribeDisposeCommand.Dispose(); // avoid duplicate call to dispose
@@ -317,6 +288,8 @@ namespace Questdb.Net.Write
             _flush.Dispose();
 
             WaitToCondition(() => _disposed, 30000);
+
+            _tcpService?.Dispose();
         }
     }
 }

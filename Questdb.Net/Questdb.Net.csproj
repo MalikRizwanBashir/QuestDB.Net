@@ -15,9 +15,9 @@
 		<Authors></Authors>
 		<Company>Questdb.Net</Company>
 		<Product>Questdb.Net</Product>
-		<Version>1.0.1</Version>
-		<AssemblyVersion>1.0.1</AssemblyVersion>
-		<FileVersion>1.0.1</FileVersion>
+		<Version>1.0.2</Version>
+		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<FileVersion>1.0.2</FileVersion>
 		<PackageProjectUrl>https://github.com/MalikRizwanBashir/QuestDB.Net</PackageProjectUrl>
 		<NeutralLanguage />
 		<PackageReleaseNotes>Initail release with ingestion using lineprototcol and query using rest APi</PackageReleaseNotes>
@@ -25,6 +25,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="CsvHelper" Version="18.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
 		<PackageReference Include="Microsoft.Extensions.ObjectPool" Version="5.0.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
 		<PackageReference Include="NodaTime" Version="3.0.3" />
