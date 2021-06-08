@@ -32,12 +32,22 @@ var point = PointData.Measurement("trades")
                     .Tag("name", "tagevalue")
                     .Tag("name2", "secondtagvalue")
                     .Field("value", 123)
-					.Timestamp(DateTimeOffset.Now, WritePrecision.Nanoseconds);
+		    .Timestamp(DateTimeOffset.Now, WritePrecision.Nanoseconds);
 writeApi.WritePoint(point);
 ```
 Write model:
 ```csharp
-writeApi.WriteMeasurement<T>(TObject);
+    [Table("table_name")]
+    public class Calculations
+    {
+        [Column(IsTimestamp = true)]
+        public DateTimeOffset TimeSatmp { get; set; }
+        [Column(IsTag = true)]
+        public string Name { get; set; }
+        public int Value { get; set; }
+    }
+    
+writeApi.WriteMeasurement<Calculations>(TObject);
 ```
 
 Query Data:
