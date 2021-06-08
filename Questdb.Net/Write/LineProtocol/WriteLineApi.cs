@@ -38,7 +38,7 @@ namespace Questdb.Net.Write
             QuestdbClientOptions options,
             WriteOptions writeOptions,
             QuestDBClient QuestDbClient,
-            IObservable<TcpService.TCPResponse> disposeCommand)
+            IObservable<TCPResponse> disposeCommand)
         {
             Arguments.CheckNotNull(writeOptions, nameof(writeOptions));
             Arguments.CheckNotNull(QuestDbClient, nameof(_questDbClient));
@@ -159,14 +159,14 @@ namespace Questdb.Net.Write
                         {
                             if (result.isSuccess) return Notification.CreateOnNext(result);
 
-                            return Notification.CreateOnError<TcpService.TCPResponse>(QuestdbException.Create(result));
+                            return Notification.CreateOnError<TCPResponse>(QuestdbException.Create(result));
                         })
-                        .Catch<Notification<TcpService.TCPResponse>, Exception>(ex =>
+                        .Catch<Notification<TCPResponse>, Exception>(ex =>
                         {
                             var error = new WriteErrorEvent(WritePrecision.Nanoseconds, lineProtocol, ex);
                             Publish(error);
 
-                            return Observable.Return(Notification.CreateOnError<TcpService.TCPResponse>(ex));
+                            return Observable.Return(Notification.CreateOnError<TCPResponse>(ex));
                         }).Do(res =>
                         {
                             if (res.Kind == NotificationKind.OnNext)

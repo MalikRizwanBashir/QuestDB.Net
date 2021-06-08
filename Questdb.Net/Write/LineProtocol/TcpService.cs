@@ -14,8 +14,6 @@ namespace Questdb.Net.Client
         private readonly string _tcpHostName;
         private readonly int _tcpPort;
 
-        public record TCPResponse(bool isSuccess, string message);
-
         public TcpService(string url, int port)
         {
             url = url.Replace("localhost", "127.0.0.1").Replace("Localhost", "127.0.0.1");
@@ -46,7 +44,7 @@ namespace Questdb.Net.Client
             {
                 // Send the message to the connected TcpServer.
                 await stream.WriteAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-                response = new(true, "Data sent");
+                response = new TCPResponse(true, "Data sent");
                 return response;
             }
             catch (Exception ex)
@@ -54,7 +52,7 @@ namespace Questdb.Net.Client
                 if (_tcpClient.Connected)
                     _tcpClient.Close();
                 _tcpClient.Dispose();
-                response = new(false, ex.Message);
+                response = new TCPResponse(false, ex.Message);
                 return response;
             }
         }
@@ -64,5 +62,15 @@ namespace Questdb.Net.Client
                 _tcpClient.Close();
             _tcpClient.Dispose();
         }
+    }
+
+    public class TCPResponse
+    {
+        public TCPResponse(bool isSuccess, string message)
+        {
+
+        }
+        public bool isSuccess { get; set; }
+        public string message { get; set; }
     }
 }

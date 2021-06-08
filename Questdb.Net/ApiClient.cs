@@ -39,13 +39,6 @@ namespace Questdb.Net
         partial void InterceptRequest(IRestRequest request);
 
         /// <summary>
-        /// Allows for extending response processing for <see cref="ApiClient"/> generated code.
-        /// </summary>
-        /// <param name="request">The RestSharp request object</param>
-        /// <param name="response">The RestSharp response object</param>
-        internal partial IRestResponse InterceptResponse(IRestRequest request, IRestResponse response);
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ApiClient" /> class
         /// with default configuration.
         /// </summary>
@@ -67,7 +60,12 @@ namespace Questdb.Net
             RestClient.AutomaticDecompression = false;
         }
 
-        internal partial IRestResponse InterceptResponse(IRestRequest request, IRestResponse response)
+        /// <summary>
+        /// Allows for extending response processing for <see cref="ApiClient"/> generated code.
+        /// </summary>
+        /// <param name="request">The RestSharp request object</param>
+        /// <param name="response">The RestSharp response object</param>
+        internal IRestResponse InterceptResponse(IRestRequest request, IRestResponse response)
         {
             return response;
         }

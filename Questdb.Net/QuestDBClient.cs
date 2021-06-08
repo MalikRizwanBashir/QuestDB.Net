@@ -20,7 +20,7 @@ namespace Questdb.Net
 
         private readonly QuestdbClientOptions _options;
 
-        private readonly Subject<TcpService.TCPResponse> _disposeNotification = new Subject<TcpService.TCPResponse>();
+        private readonly Subject<TCPResponse> _disposeNotification = new Subject<TCPResponse>();
 
         #region ctor
 
