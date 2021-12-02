@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Net;
 using Questdb.Net.Exceptions;
+using Serilog;
 
 namespace Questdb.Net.Write
 {
@@ -50,7 +51,7 @@ namespace Questdb.Net.Write
             //
             if (_count > _writeOptions.MaxRetries)
             {
-                Trace.TraceWarning($"Max write retries exceeded. Response: '{Error.Message}'.");
+                Log.Warning($"Max write retries exceeded. Response: '{Error.Message}'.");
 
                 return false;
             }
@@ -93,10 +94,10 @@ namespace Questdb.Net.Write
             else
             {
                 retryInterval = _writeOptions.RetryInterval
-                                * (long) (Math.Pow(_writeOptions.ExponentialBase, _count - 1));
+                                * (long)(Math.Pow(_writeOptions.ExponentialBase, _count - 1));
                 retryInterval = Math.Min(retryInterval, _writeOptions.MaxRetryDelay);
 
-                Trace.WriteLine($"The QuestDB does not specify \"Retry-After\". " +
+                Log.Debug($"The QuestDB does not specify \"Retry-After\". " +
                                 $"Use the default retryInterval: {retryInterval}");
             }
 
@@ -107,7 +108,7 @@ namespace Questdb.Net.Write
 
         internal static int JitterDelay(WriteOptions writeOptions)
         {
-            return (int) (new Random().NextDouble() * writeOptions.JitterInterval);
+            return (int)(new Random().NextDouble() * writeOptions.JitterInterval);
         }
 
         private WebException GetWebException(Exception exception)

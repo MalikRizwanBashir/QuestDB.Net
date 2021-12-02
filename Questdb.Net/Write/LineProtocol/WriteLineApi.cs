@@ -2,6 +2,7 @@
 using Questdb.Net.Client;
 using Questdb.Net.Config;
 using Questdb.Net.Exceptions;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -183,14 +184,14 @@ namespace Questdb.Net.Write
                         switch (notification.Kind)
                         {
                             case NotificationKind.OnNext:
-                                Trace.WriteLine($"The batch item: {notification} was processed successfully.");
+                                Log.Debug($"The batch item: {notification} was processed successfully.");
                                 break;
                             case NotificationKind.OnError:
-                                Trace.WriteLine(
+                                Log.Debug(
                                     $"The batch item wasn't processed successfully because: {notification.Exception}");
                                 break;
                             default:
-                                Trace.WriteLine($"The batch item: {notification} was processed");
+                                Log.Debug($"The batch item: {notification} was processed");
                                 break;
                         }
                     },
@@ -198,12 +199,12 @@ namespace Questdb.Net.Write
                     {
                         Publish(new WriteRuntimeExceptionEvent(exception));
                         _disposed = true;
-                        Trace.WriteLine($"The unhandled exception occurs: {exception}");
+                        Log.Error($"The unhandled exception occurs: {exception}");
                     },
                     () =>
                     {
                         _disposed = true;
-                        Trace.WriteLine("The WriteApi was disposed.");
+                        Log.Debug("The WriteApi was disposed.");
                     });
         }
 
@@ -274,11 +275,11 @@ namespace Questdb.Net.Write
 
         #endregion
 
-        public new void Dispose()
+        public new void Dispose()   
         {
             _unsubscribeDisposeCommand.Dispose(); // avoid duplicate call to dispose
 
-            Trace.WriteLine("Flushing batches before shutdown.");
+            Log.Debug("Flushing batches before shutdown.");
 
             if (!_subject.IsDisposed) _subject.OnCompleted();
 

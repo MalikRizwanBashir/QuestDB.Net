@@ -1,4 +1,5 @@
 ﻿using Questdb.Net.Config;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,7 +36,7 @@ namespace Questdb.Net.Write
                 Thread.Sleep(25);
                 if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - start > millis)
                 {
-                    Trace.TraceError($"The WriteApi can't be gracefully dispose! - {millis}ms elapsed.");
+                    Log.Error($"The WriteApi can't be gracefully dispose! - {millis}ms elapsed.");
                     break;
                 }
             }
@@ -96,7 +97,7 @@ namespace Questdb.Net.Write
             {
                 if (!_point.HasFields())
                 {
-                    Trace.WriteLine($"The point: ${_point} doesn't contains any fields, skipping");
+                    Log.Debug($"The point: ${_point} doesn't contains any fields, skipping");
 
                     return null;
                 }
@@ -126,7 +127,7 @@ namespace Questdb.Net.Write
                 var point = _measurementMapper.ToPoint(_measurement, WritePrecision.Nanoseconds);
                 if (!point.HasFields())
                 {
-                    Trace.WriteLine($"The point: ${point} doesn't contains any fields, skipping");
+                    Log.Debug($"The point: ${point} doesn't contains any fields, skipping");
 
                     return null;
                 }

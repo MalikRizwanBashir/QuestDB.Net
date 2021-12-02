@@ -1,3 +1,4 @@
+using Serilog;
 using System;
 using System.Diagnostics;
 
@@ -17,7 +18,7 @@ namespace Questdb.Net.Write
 
         internal override void LogEvent()
         {
-            Trace.WriteLine("The data was successfully written to QuestDB 2.0.");
+            Log.Debug("The data was successfully written to QuestDB 2.0.");
         }
     }
 
@@ -38,7 +39,7 @@ namespace Questdb.Net.Write
 
         internal override void LogEvent()
         {
-            Trace.TraceError($"The unhandled exception occurs: {Exception}");
+            Log.Error($"The unhandled exception occurs: {Exception}");
         }
     }
 
@@ -57,7 +58,7 @@ namespace Questdb.Net.Write
 
         internal override void LogEvent()
         {
-            Trace.TraceError($"The error occurred during writing of data: {Exception.Message}");
+            Log.Error($"The error occurred during writing of data: {Exception.Message}");
         }
     }
 
@@ -88,7 +89,7 @@ namespace Questdb.Net.Write
                           $"Reason: '{Exception.Message}'. " +
                           $"Retry in: {(double) RetryInterval / 1000}s.";
             
-            Trace.TraceWarning(message);
+            Log.Warning(message);
         }
     }
 

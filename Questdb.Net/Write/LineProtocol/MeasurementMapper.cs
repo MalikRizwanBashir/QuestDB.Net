@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NodaTime;
+using Serilog;
 
 namespace Questdb.Net.Write
 {
@@ -78,7 +79,7 @@ namespace Questdb.Net.Write
                     }
                     else
                     {
-                        Trace.WriteLine($"{value} is not supported as Timestamp");
+                        Log.Debug($"{value} is not supported as Timestamp");
                     }
                 }
                 else
