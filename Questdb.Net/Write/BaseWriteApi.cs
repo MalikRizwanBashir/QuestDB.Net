@@ -42,13 +42,6 @@ namespace Questdb.Net.Write
             }
         }
 
-        protected void Publish(QuestdbEventArgs eventArgs)
-        {
-            eventArgs.LogEvent();
-
-            EventHandler?.Invoke(this, eventArgs);
-        }
-
         public void Dispose()
         {
             throw new NotImplementedException();
@@ -56,8 +49,10 @@ namespace Questdb.Net.Write
 
         internal abstract class BatchWriteData
         {
-            protected BatchWriteData()
+            internal readonly BatchWriteOptions Options;
+            protected BatchWriteData(BatchWriteOptions options)
             {
+                this.Options = options;
             }
 
             internal abstract string FormatData();
@@ -67,11 +62,10 @@ namespace Questdb.Net.Write
         {
             private readonly string _records;
 
-            internal BatchWriteRecord(string records)
+            internal BatchWriteRecord(BatchWriteOptions options, string record) : base(options)
             {
-                Arguments.CheckNotNull(records, nameof(records));
-
-                _records = records + "\n";
+                Arguments.CheckNotNull(record, nameof(record));
+                _records = record + "\n";
             }
 
             internal override string FormatData()
@@ -85,7 +79,7 @@ namespace Questdb.Net.Write
             private readonly PointData _point;
             private readonly QuestdbClientOptions _clientOptions;
 
-            internal BatchWritePoint(QuestdbClientOptions clientOptions, PointData point)
+            internal BatchWritePoint(QuestdbClientOptions clientOptions, BatchWriteOptions options, PointData point) : base(options)
             {
                 Arguments.CheckNotNull(point, nameof(point));
 
@@ -112,8 +106,8 @@ namespace Questdb.Net.Write
             private readonly Mapper _measurementMapper;
             private readonly QuestdbClientOptions _clientOptions;
 
-            internal BatchWriteMeasurement(QuestdbClientOptions clientOptions, TM measurement,
-                Mapper measurementMapper)
+            internal BatchWriteMeasurement(QuestdbClientOptions clientOptions, BatchWriteOptions options, TM measurement,
+                Mapper measurementMapper) : base(options)
             {
                 Arguments.CheckNotNull(measurement, nameof(measurement));
 
@@ -133,6 +127,45 @@ namespace Questdb.Net.Write
                 }
 
                 return point.ToLineProtocol(_clientOptions.PointSettings);
+            }
+        }
+
+        internal class BatchWriteOptions
+        {
+            internal readonly string Bucket = string.Empty;
+            internal readonly WritePrecision Precision = WritePrecision.Nanoseconds;
+
+            internal BatchWriteOptions()
+            {
+            }
+
+            internal BatchWriteOptions(string bucket, WritePrecision precision)
+            {
+                Bucket = bucket;
+                Precision = precision;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = Bucket != null ? Bucket.GetHashCode() : 0;
+                    hashCode = (hashCode * 397) ^ (int)Precision;
+                    return hashCode;
+                }
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != GetType()) return false;
+                return Equals((BatchWriteOptions)obj);
+            }
+
+            private bool Equals(BatchWriteOptions other)
+            {
+                return string.Equals(Bucket, other.Bucket) && Precision == other.Precision;
             }
         }
     }

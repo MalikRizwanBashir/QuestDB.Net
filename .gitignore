@@ -1,3 +1,4 @@
 .vs/
 Questdb.Net/obj/
 /Questdb.Net/bin/Release
+/Questdb.Net/bin/Debug

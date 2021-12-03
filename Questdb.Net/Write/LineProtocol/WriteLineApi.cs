@@ -21,11 +21,14 @@ namespace Questdb.Net.Write
     public class WriteLineApi : BaseWriteApi, IWriteLineApi
     {
         private readonly Subject<IObservable<BatchWriteData>> _flush = new Subject<IObservable<BatchWriteData>>();
+        private readonly Subject<IObservable<string>> _lineFlush = new Subject<IObservable<string>>();
 
         private readonly QuestDBClient _questDbClient;
         private readonly Mapper _measurementMapper = new Mapper();
-        private readonly QuestdbClientOptions _options;
+        private readonly QuestdbClientOptions _clientOptions;
+        private readonly BatchWriteOptions _options;
         private readonly Subject<BatchWriteData> _subject = new Subject<BatchWriteData>();
+        private readonly Subject<string> _subjectLine = new Subject<string>();
         private static readonly ObjectPoolProvider _objectPoolProvider = new DefaultObjectPoolProvider();
         private static readonly ObjectPool<StringBuilder> _stringBuilderPool = _objectPoolProvider.CreateStringBuilderPool();
         private readonly IDisposable _unsubscribeDisposeCommand;
@@ -45,9 +48,10 @@ namespace Questdb.Net.Write
             Arguments.CheckNotNull(QuestDbClient, nameof(_questDbClient));
             Arguments.CheckNotNull(disposeCommand, nameof(disposeCommand));
 
-            _options = options;
+            _clientOptions = options;
+            _options = new BatchWriteOptions();
 
-            _tcpService = new TcpService(_options.Url, 9009);
+            _tcpService = new TcpService(_clientOptions.Url, 9009);
             _questDbClient = QuestDbClient;
 
             _unsubscribeDisposeCommand = disposeCommand.Subscribe(_ => Dispose());
@@ -59,8 +63,9 @@ namespace Questdb.Net.Write
             // https://github.com/dotnet/reactive/issues/19
 
 
+            #region single insert
 
-            IObservable<IObservable<BatchWriteRecord>> batches = _subject
+            IObservable<IObservable<BatchWriteRecord>> joinedbatches = _subject
                 //
                 // Batching
                 //
@@ -81,7 +86,7 @@ namespace Questdb.Net.Write
                 //
                 // Group by key - same bucket, same org
                 //
-                //.SelectMany(it => it.GroupBy(batchWrite => batchWrite.Options))
+                .SelectMany(it => it.GroupBy(batchWrite => batchWrite.Options))
                 //
                 // Create Write Point = bucket, org, ... + data
                 //
@@ -108,13 +113,13 @@ namespace Questdb.Net.Write
                             return result;
                         });
 
-                    return aggregate.Select(records => new BatchWriteRecord(records))
+                    return aggregate.Select(records => new BatchWriteRecord(grouped.Key, records))
                                     .Where(batchWriteItem => !string.IsNullOrEmpty(batchWriteItem.FormatData()));
                 });
 
             if (writeOptions.JitterInterval > 0)
             {
-                batches = batches
+                joinedbatches = joinedbatches
                     //
                     // Jitter
                     //
@@ -123,14 +128,16 @@ namespace Questdb.Net.Write
                         return source.Delay(_ => Observable.Timer(TimeSpan.FromMilliseconds(RetryAttempt.JitterDelay(writeOptions)), writeOptions.WriteScheduler));
                     });
             }
-            var query = batches
+            var query = joinedbatches
                 .Concat()
                 //
                 // Map to Async request
                 //
                 .Select(batchWriteItem =>
                 {
+                    var bucket = batchWriteItem.Options.Bucket;
                     var lineProtocol = batchWriteItem.FormatData();
+                    var precision = batchWriteItem.Options.Precision;
 
                     return Observable
                         .Defer(() =>
@@ -144,11 +151,6 @@ namespace Questdb.Net.Write
                                 if (attempt.IsRetry())
                                 {
                                     var retryInterval = attempt.GetRetryInterval();
-
-                                    var retryable = new WriteRetriableErrorEvent(WritePrecision.Nanoseconds, lineProtocol,
-                                        attempt.Error, retryInterval);
-
-                                    Publish(retryable);
 
                                     return Observable.Timer(TimeSpan.FromMilliseconds(retryInterval),
                                         writeOptions.WriteScheduler);
@@ -164,16 +166,12 @@ namespace Questdb.Net.Write
                         })
                         .Catch<Notification<TCPResponse>, Exception>(ex =>
                         {
-                            var error = new WriteErrorEvent(WritePrecision.Nanoseconds, lineProtocol, ex);
-                            Publish(error);
-
                             return Observable.Return(Notification.CreateOnError<TCPResponse>(ex));
                         }).Do(res =>
                         {
                             if (res.Kind == NotificationKind.OnNext)
                             {
-                                var success = new WriteSuccessEvent(WritePrecision.Nanoseconds, lineProtocol);
-                                Publish(success);
+                                //successful
                             }
                         });
                 })
@@ -184,28 +182,136 @@ namespace Questdb.Net.Write
                         switch (notification.Kind)
                         {
                             case NotificationKind.OnNext:
-                                Log.Debug($"The batch item: {notification} was processed successfully.");
+                                Trace.WriteLine($"The batch item: {notification} was processed successfully.");
                                 break;
                             case NotificationKind.OnError:
-                                Log.Debug(
+                                Trace.WriteLine(
                                     $"The batch item wasn't processed successfully because: {notification.Exception}");
                                 break;
                             default:
-                                Log.Debug($"The batch item: {notification} was processed");
+                                Trace.WriteLine($"The batch item: {notification} was processed");
                                 break;
                         }
                     },
                     exception =>
                     {
-                        Publish(new WriteRuntimeExceptionEvent(exception));
                         _disposed = true;
-                        Log.Error($"The unhandled exception occurs: {exception}");
+                        Trace.WriteLine($"The unhandled exception occurs: {exception}");
                     },
                     () =>
                     {
                         _disposed = true;
-                        Log.Debug("The WriteApi was disposed.");
+                        Trace.WriteLine("The WriteApi was disposed.");
                     });
+
+            #endregion
+
+
+            #region batch insert
+            IObservable<IObservable<string>> batches = _subjectLine
+                //
+                // Batching
+                //
+                .Publish(connectedSource =>
+                {
+                    var trigger = Observable.Merge(
+                            // triggered by time & count
+                            connectedSource.Window(TimeSpan.FromMilliseconds(
+                                                writeOptions.FlushInterval),
+                                                writeOptions.BatchSize,
+                                                writeOptions.WriteScheduler),
+                            // flush trigger
+                            _lineFlush
+                        );
+                    return connectedSource
+                        .Window(trigger);
+                });
+
+            if (writeOptions.JitterInterval > 0)
+            {
+                batches = batches
+                    //
+                    // Jitter
+                    //
+                    .Select(source =>
+                    {
+                        return source.Delay(_ => Observable.Timer(TimeSpan.FromMilliseconds(RetryAttempt.JitterDelay(writeOptions)), writeOptions.WriteScheduler));
+                    });
+            }
+            var lineQuery = batches
+                .Concat()
+                //
+                // Map to Async request
+                //
+                .Select(batchWriteItem =>
+                {
+                    return Observable
+                        .Defer(() =>
+                            _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
+                                .ToObservable())
+                        .RetryWhen(f => f
+                            .Zip(Observable.Range(1, writeOptions.MaxRetries + 1), (exception, count)
+                                => new RetryAttempt(exception, count, writeOptions))
+                            .SelectMany(attempt =>
+                            {
+                                if (attempt.IsRetry())
+                                {
+                                    var retryInterval = attempt.GetRetryInterval();
+
+                                    return Observable.Timer(TimeSpan.FromMilliseconds(retryInterval),
+                                        writeOptions.WriteScheduler);
+                                }
+
+                                throw attempt.Error;
+                            }))
+                        .Select(result =>
+                        {
+                            if (result.isSuccess) return Notification.CreateOnNext(result);
+
+                            return Notification.CreateOnError<TCPResponse>(QuestdbException.Create(result));
+                        })
+                        .Catch<Notification<TCPResponse>, Exception>(ex =>
+                        {
+                            return Observable.Return(Notification.CreateOnError<TCPResponse>(ex));
+                        }).Do(res =>
+                        {
+                            if (res.Kind == NotificationKind.OnNext)
+                            {
+                                //successful
+                            }
+                        });
+                })
+                .Concat()
+                .Subscribe(
+                    notification =>
+                    {
+                        switch (notification.Kind)
+                        {
+                            case NotificationKind.OnNext:
+                                Trace.WriteLine($"The batch item: {notification} was processed successfully.");
+                                break;
+                            case NotificationKind.OnError:
+                                Trace.WriteLine(
+                                    $"The batch item wasn't processed successfully because: {notification.Exception}");
+                                break;
+                            default:
+                                Trace.WriteLine($"The batch item: {notification} was processed");
+                                break;
+                        }
+                    },
+                    exception =>
+                    {
+                        _disposed = true;
+                        Trace.WriteLine($"The unhandled exception occurs: {exception}");
+                    },
+                    () =>
+                    {
+                        _disposed = true;
+                        Trace.WriteLine("The WriteApi was disposed.");
+                    });
+
+            #endregion
+
         }
 
         #region write points, line protocol
@@ -217,7 +323,7 @@ namespace Questdb.Net.Write
         {
             if (point == null) return;
 
-            _subject.OnNext(new BatchWritePoint(_options, point));
+            _subject.OnNext(new BatchWritePoint(_clientOptions, _options, point));
         }
 
         /// <summary>
@@ -226,7 +332,20 @@ namespace Questdb.Net.Write
         /// <param name="points">specifies the Data points to write into database</param>
         public void WritePoints(List<PointData> points)
         {
-            foreach (var point in points) WritePoint(point);
+            StringBuilder lines = new StringBuilder();
+            int j = 0;
+            for (int i = 0; i < points.Count; i++)
+            {
+                lines.Append(points[i].ToLineProtocol(_clientOptions.PointSettings));
+                lines.Append("\n");
+                if (j >= 10000 || i + 1 == points.Count)
+                {
+                    _subjectLine.OnNext(lines.ToString());
+                    lines.Clear();
+                    j = 0;
+                }
+            }
+            lines.Clear();
         }
 
         /// <summary>
@@ -235,7 +354,20 @@ namespace Questdb.Net.Write
         /// <param name="points">specifies the Data points to write into database</param>
         public void WritePoints(params PointData[] points)
         {
-            foreach (var point in points) WritePoint(point);
+            StringBuilder lines = new StringBuilder();
+            int j = 0;
+            for (int i = 0; i < points.Length; i++)
+            {
+                lines.Append(points[i].ToLineProtocol(_clientOptions.PointSettings));
+                lines.Append("\n");
+                if (j >= 1000 || i + 1 == points.Length)
+                {
+                    _subjectLine.OnNext(lines.ToString());
+                    lines.Clear();
+                    j = 0;
+                }
+            }
+            lines.Clear();
         }
 
         #endregion
@@ -250,7 +382,7 @@ namespace Questdb.Net.Write
         {
             if (measurement == null) return;
 
-            _subject.OnNext(new BatchWriteMeasurement<TM>(_options, measurement, _measurementMapper));
+            _subject.OnNext(new BatchWriteMeasurement<TM>(_clientOptions, _options, measurement, _measurementMapper));
         }
 
         /// <summary>
@@ -260,7 +392,20 @@ namespace Questdb.Net.Write
         /// <typeparam name="TM">measurement type</typeparam>
         public void WriteMeasurements<TM>(List<TM> measurements)
         {
-            foreach (var measurement in measurements) WriteMeasurement(measurement);
+            StringBuilder lines = new StringBuilder();
+            int j = 0;
+            for (int i = 0; i < measurements.Count; i++)
+            {
+                lines.Append(_measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                lines.Append("\n");
+                if (j >= 1000 || i + 1 == measurements.Count)
+                {
+                    _subjectLine.OnNext(lines.ToString());
+                    lines.Clear();
+                    j = 0;
+                }
+            }
+            lines.Clear();
         }
 
         /// <summary>
@@ -270,12 +415,25 @@ namespace Questdb.Net.Write
         /// <typeparam name="TM">measurement type</typeparam>
         public void WriteMeasurements<TM>(params TM[] measurements)
         {
-            WriteMeasurements(measurements.ToList());
+            StringBuilder lines = new StringBuilder();
+            int j = 0;
+            for (int i = 0; i < measurements.Length; i++)
+            {
+                lines.Append(_measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                lines.Append("\n");
+                if (j >= 1000 || i + 1 == measurements.Length)
+                {
+                    _subjectLine.OnNext(lines.ToString());
+                    lines.Clear();
+                    j = 0;
+                }
+            }
+            lines.Clear();
         }
 
         #endregion
 
-        public new void Dispose()   
+        public new void Dispose()
         {
             _unsubscribeDisposeCommand.Dispose(); // avoid duplicate call to dispose
 
