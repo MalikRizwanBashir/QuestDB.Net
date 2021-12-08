@@ -56,7 +56,7 @@ Write model:
     public class Calculations
     {
         [Column(IsTimestamp = true)]
-        public DateTimeOffset TimeSatmp { get; set; }
+        public DateTimeOffset TimeStamp { get; set; }
         [Column(IsTag = true)]
         public string Name { get; set; }
         public int Value { get; set; }
