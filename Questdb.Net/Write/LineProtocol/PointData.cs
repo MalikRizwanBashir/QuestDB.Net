@@ -15,18 +15,19 @@ namespace Questdb.Net.Write
     {
         private static readonly DateTime EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        private readonly string _measurementName;
         private readonly ImmutableSortedDictionary<string, string> _tags = ImmutableSortedDictionary<string, string>.Empty;
         private readonly ImmutableSortedDictionary<string, object> _fields = ImmutableSortedDictionary<string, object>.Empty;
 
         public readonly WritePrecision Precision;
+        public readonly string MeasurementName;
+        public string Tags = string.Empty;
         private readonly BigInteger? _time;
 
         private PointData(string measurementName)
         {
             Arguments.CheckNonEmptyString(measurementName, "Measurement name");
 
-            _measurementName = measurementName;
+            MeasurementName = measurementName;
             Precision = WritePrecision.Nanoseconds;
         }
 
@@ -46,7 +47,7 @@ namespace Questdb.Net.Write
                             ImmutableSortedDictionary<string, string> tags,
                             ImmutableSortedDictionary<string, object> fields)
         {
-            _measurementName = measurementName;
+            MeasurementName = measurementName;
             Precision = precision;
             _time = time;
             _tags = tags;
@@ -67,11 +68,11 @@ namespace Questdb.Net.Write
             {
                 if (tags.ContainsKey(name))
                 {
-                    //Trace.TraceWarning($"Empty tags will cause deletion of, tag [{name}], measurement [{_measurementName}]");
+                    //Trace.TraceWarning($"Empty tags will cause deletion of, tag [{name}], measurement [{MeasurementName}]");
                 }
                 else
                 {
-                    //Trace.TraceWarning($"Empty tags has no effect, tag [{name}], measurement [{_measurementName}]");
+                    //Trace.TraceWarning($"Empty tags has no effect, tag [{name}], measurement [{MeasurementName}]");
                     return this;
                 }
             }
@@ -80,9 +81,12 @@ namespace Questdb.Net.Write
                 tags = tags.Remove(name);
             }
             if (!isEmptyValue)
-                tags = tags.Add(name, value.Replace(" ","_"));
+            {
+                Tags = Tags + value.Replace(" ", "_");
+                tags = tags.Add(name, value.Replace(" ", "_"));
+            }
 
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 Precision,
                                 _time,
                                 tags,
@@ -174,7 +178,7 @@ namespace Questdb.Net.Write
         /// <returns></returns>
         public PointData Timestamp(long timestamp, WritePrecision timeUnit)
         {
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 timeUnit,
                                 timestamp,
                                 _tags,
@@ -206,7 +210,7 @@ namespace Questdb.Net.Write
                     break;
             }
 
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 timeUnit,
                                 time,
                                 _tags,
@@ -271,7 +275,7 @@ namespace Questdb.Net.Write
             }
 
 
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 timeUnit,
                                 time,
                                 _tags,
@@ -307,7 +311,7 @@ namespace Questdb.Net.Write
             }
 
 
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 timeUnit,
                                 time,
                                 _tags,
@@ -332,7 +336,7 @@ namespace Questdb.Net.Write
         {
             var sb = new StringBuilder();
 
-            EscapeKey(sb, _measurementName, false);
+            EscapeKey(sb, MeasurementName, false);
             AppendTags(sb, pointSettings);
             var appendedFields = AppendFields(sb);
             if (!appendedFields)
@@ -356,7 +360,7 @@ namespace Questdb.Net.Write
             }
             fields = fields.Add(name, value);
 
-            return new PointData(_measurementName,
+            return new PointData(MeasurementName,
                                 Precision,
                                 _time,
                                 _tags,
@@ -614,7 +618,7 @@ namespace Questdb.Net.Write
                            });
 
             result = result &&
-                   _measurementName == other._measurementName &&
+                   MeasurementName == other.MeasurementName &&
                    Precision == other.Precision &&
                    EqualityComparer<BigInteger?>.Default.Equals(_time, other._time);
 

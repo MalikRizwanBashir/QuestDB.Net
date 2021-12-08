@@ -182,26 +182,25 @@ namespace Questdb.Net.Write
                         switch (notification.Kind)
                         {
                             case NotificationKind.OnNext:
-                                Trace.WriteLine($"The batch item: {notification} was processed successfully.");
+                                Log.Debug($"The batch item: {notification} was processed successfully.");
                                 break;
                             case NotificationKind.OnError:
-                                Trace.WriteLine(
-                                    $"The batch item wasn't processed successfully because: {notification.Exception}");
+                                Log.Debug($"The batch item wasn't processed successfully because: {notification.Exception}");
                                 break;
                             default:
-                                Trace.WriteLine($"The batch item: {notification} was processed");
+                                Log.Debug($"The batch item: {notification} was processed");
                                 break;
                         }
                     },
                     exception =>
                     {
                         _disposed = true;
-                        Trace.WriteLine($"The unhandled exception occurs: {exception}");
+                        Log.Warning($"The unhandled exception occurs: {exception}");
                     },
                     () =>
                     {
                         _disposed = true;
-                        Trace.WriteLine("The WriteApi was disposed.");
+                        Log.Debug("The WriteApi was disposed.");
                     });
 
             #endregion
@@ -288,26 +287,26 @@ namespace Questdb.Net.Write
                         switch (notification.Kind)
                         {
                             case NotificationKind.OnNext:
-                                Trace.WriteLine($"The batch item: {notification} was processed successfully.");
+                                Log.Debug($"The batch item: {notification} was processed successfully.");
                                 break;
                             case NotificationKind.OnError:
-                                Trace.WriteLine(
+                                Log.Debug(
                                     $"The batch item wasn't processed successfully because: {notification.Exception}");
                                 break;
                             default:
-                                Trace.WriteLine($"The batch item: {notification} was processed");
+                                Log.Debug($"The batch item: {notification} was processed");
                                 break;
                         }
                     },
                     exception =>
                     {
                         _disposed = true;
-                        Trace.WriteLine($"The unhandled exception occurs: {exception}");
+                        Log.Warning($"The unhandled exception occurs: {exception}");
                     },
                     () =>
                     {
                         _disposed = true;
-                        Trace.WriteLine("The WriteApi was disposed.");
+                        Log.Debug("The WriteApi was disposed.");
                     });
 
             #endregion

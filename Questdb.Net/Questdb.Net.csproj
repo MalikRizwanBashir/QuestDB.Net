@@ -15,9 +15,9 @@
 		<Authors></Authors>
 		<Company>Questdb.Net</Company>
 		<Product>Questdb.Net</Product>
-		<Version>1.0.3</Version>
-		<AssemblyVersion>1.0.3</AssemblyVersion>
-		<FileVersion>1.0.3</FileVersion>
+		<Version>1.2.0</Version>
+		<AssemblyVersion>1.2.0</AssemblyVersion>
+		<FileVersion>1.2.0</FileVersion>
 		<PackageProjectUrl>https://github.com/MalikRizwanBashir/QuestDB.Net</PackageProjectUrl>
 		<NeutralLanguage />
 		<PackageReleaseNotes>Initail release with ingestion using lineprototcol and query using rest APi</PackageReleaseNotes>

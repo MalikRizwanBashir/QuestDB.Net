@@ -16,7 +16,7 @@ namespace Questdb.Net
     }
 
     /// <summary>
-    /// The annotation is used to customize bidirectional mapping between POCO and Flux query result or Line Protocol.
+    /// The annotation is used to customize bidirectional mapping between POCO and query result or Line Protocol.
     /// </summary>
     public sealed class Column : Attribute
     {

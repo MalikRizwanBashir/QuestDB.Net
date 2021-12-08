@@ -26,14 +26,14 @@ namespace Questdb.Net.Query
             /// Add new <see cref="QuestdbResponse"/> to a consumer.
             /// </summary>
             /// <param name="cancellable">cancellable</param>
-            /// <param name="table">new <see cref="FluxTable"/></param>
+            /// <param name="table">new <see cref="Table"/></param>
             void Accept(ICancellable cancellable, QuestdbResponse table);
 
             /// <summary>
-            /// Add new <see cref="FluxRecord"/> to a consumer.
+            /// Add new <see cref="Record"/> to a consumer.
             /// </summary>
             /// <param name="cancellable">cancellable</param>
-            /// <param name="record">new <see cref="FluxRecord"/></param>
+            /// <param name="record">new <see cref="Record"/></param>
             void Accept(ICancellable cancellable, List<TableColumn> columns, List<object> record);
         }
 
@@ -60,16 +60,16 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Parse Flux CSV response to <see cref="ICSVResponseConsumer"/>.
+        /// Parse CSV response to <see cref="ICSVResponseConsumer"/>.
         /// </summary>
         /// <param name="source">CSV Data source</param>
         /// <param name="cancellable">to cancel parsing</param>
-        /// <param name="consumer">to accept <see cref="FluxTable"/> or <see cref="FluxRecord"/></param>
+        /// <param name="consumer">to accept <see cref="Table"/> or <see cref="Record"/></param>
         public void ParseCSVResponse(Stream source, ICancellable cancellable, ICSVResponseConsumer consumer)
         {
             Arguments.CheckNotNull(source, "source");
             using var csv = new CsvReader(new StreamReader(source), CultureInfo.InvariantCulture);
-            var state = new ParseFluxResponseState { csv = csv };
+            var state = new ParseResponseState { csv = csv };
 
             while (csv.Read())
             {
@@ -89,7 +89,7 @@ namespace Questdb.Net.Query
         }
 
         /// <summary>
-        /// Parse Flux CSV response to <see cref="IEnumerable{T}"/>.
+        /// Parse CSV response to <see cref="IEnumerable{T}"/>.
         /// </summary>
         /// <param name="reader">CSV Data source reader</param>
         /// <param name="cancellationToken">cancellation token</param>
@@ -102,7 +102,7 @@ namespace Questdb.Net.Query
             return csv.GetRecords<T>();
         }
 
-        private class ParseFluxResponseState
+        private class ParseResponseState
         {
             public ParsingState parsingState = ParsingState.Normal;
             public QuestdbResponse table;
@@ -111,7 +111,7 @@ namespace Questdb.Net.Query
             public CsvReader csv;
         }
 
-        private IEnumerable<(QuestdbResponse, List<object>)> ParseNextResponse(ParseFluxResponseState state)
+        private IEnumerable<(QuestdbResponse, List<object>)> ParseNextResponse(ParseResponseState state)
         {
             //
             // Response has HTTP status ok, but response is error.
@@ -156,13 +156,13 @@ namespace Questdb.Net.Query
         {
             var record = new List<object>();
 
-            foreach (var fluxColumn in table.Columns)
+            foreach (var column in table.Columns)
             {
-                var columnName = fluxColumn.Name;
+                var columnName = column.Name;
 
-                var strValue = csv[fluxColumn.Index + 1];
+                var strValue = csv[column.Index + 1];
 
-                record.Add(ToValue(strValue, fluxColumn));
+                record.Add(ToValue(strValue, column));
             }
 
             return record;

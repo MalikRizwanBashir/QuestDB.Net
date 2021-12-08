@@ -114,7 +114,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">Query or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public async System.Threading.Tasks.Task<IRestResponse> PostQueryWithIRestResponseAsync(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {
@@ -174,7 +174,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">Query or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public IRestResponse PostQueryWithIRestResponse(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {
@@ -234,7 +234,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">Query or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public RestRequest PostQueryWithRestRequest(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {
@@ -283,7 +283,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">Query or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public async System.Threading.Tasks.Task<IRestResponse> GetQueryWithIRestResponseAsync(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {
@@ -338,7 +338,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">Query or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public IRestResponse GetQueryWithIRestResponse(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {
@@ -393,7 +393,7 @@ namespace Questdb.Net
         /// </summary>
         /// <param name="acceptEncoding">The Accept-Encoding request HTTP header advertises which content encoding, usually a compression algorithm, the client is able to understand. (optional, default to identity)</param>
         /// <param name="contentType"> (optional)</param>
-        /// <param name="query">Flux query or specification to execute (optional)</param>
+        /// <param name="query">@uery or specification to execute (optional)</param>
         /// <returns>ApiResponse of string</returns>
         public RestRequest GetQueryWithRestRequest(string endpoint = "/exec", string acceptEncoding = null, string contentType = null, string query = null)
         {

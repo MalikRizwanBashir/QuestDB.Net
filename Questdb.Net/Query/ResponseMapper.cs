@@ -17,9 +17,9 @@ namespace Questdb.Net.Query
         private static readonly ConcurrentDictionary<PropertyInfo, Net.Column> AttributeCache = new ConcurrentDictionary<PropertyInfo, Net.Column>();
 
         /// <summary>
-        /// Maps FluxRecord into custom POCO class.
+        /// Maps Record into custom POCO class.
         /// </summary>
-        /// <param name="record">the Flux record</param>
+        /// <param name="record">the record</param>
         /// <typeparam name="T">the POCO type</typeparam>
         /// <returns></returns>
         /// <exception cref="QuestdbException"></exception>

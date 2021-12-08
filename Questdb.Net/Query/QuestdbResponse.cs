@@ -4,10 +4,6 @@ using System.Text;
 
 namespace Questdb.Net.Query
 {
-    /// <summary>
-    /// This class represents table structure of Flux CSV Response.
-    ///<a href="http://bit.ly/flux-spec">Specification</a>.
-    /// </summary>
     public class QuestdbResponse
     {
         /// <summary>
