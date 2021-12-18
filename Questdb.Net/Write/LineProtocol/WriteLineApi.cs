@@ -332,12 +332,14 @@ namespace Questdb.Net.Write
         public void WritePoints(List<PointData> points)
         {
             StringBuilder lines = new StringBuilder();
-            int j = 0;
+            UInt16 j = 0;
             for (int i = 0; i < points.Count; i++)
             {
-                lines.Append(points[i].ToLineProtocol(_clientOptions.PointSettings));
+                var p = points[i];
+                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
                 lines.Append("\n");
-                if (j >= 10000 || i + 1 == points.Count)
+                j += p.Length;
+                if (j >= 20000 || i + 1 == points.Count)
                 {
                     _subjectLine.OnNext(lines.ToString());
                     lines.Clear();
@@ -357,9 +359,11 @@ namespace Questdb.Net.Write
             int j = 0;
             for (int i = 0; i < points.Length; i++)
             {
-                lines.Append(points[i].ToLineProtocol(_clientOptions.PointSettings));
+                var p = points[i];
+                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
                 lines.Append("\n");
-                if (j >= 1000 || i + 1 == points.Length)
+                j += p.Length;
+                if (j >= 20000 || i + 1 == points.Length)
                 {
                     _subjectLine.OnNext(lines.ToString());
                     lines.Clear();
@@ -392,12 +396,14 @@ namespace Questdb.Net.Write
         public void WriteMeasurements<TM>(List<TM> measurements)
         {
             StringBuilder lines = new StringBuilder();
-            int j = 0;
+            UInt16 j = 0;
             for (int i = 0; i < measurements.Count; i++)
             {
-                lines.Append(_measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                var p = _measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds);
+                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
                 lines.Append("\n");
-                if (j >= 1000 || i + 1 == measurements.Count)
+                j += p.Length;
+                if (j >= 20000 || i + 1 == measurements.Count)
                 {
                     _subjectLine.OnNext(lines.ToString());
                     lines.Clear();
@@ -415,12 +421,14 @@ namespace Questdb.Net.Write
         public void WriteMeasurements<TM>(params TM[] measurements)
         {
             StringBuilder lines = new StringBuilder();
-            int j = 0;
+            UInt16 j = 0;
             for (int i = 0; i < measurements.Length; i++)
             {
-                lines.Append(_measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                var p = _measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds);
+                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
                 lines.Append("\n");
-                if (j >= 1000 || i + 1 == measurements.Length)
+                j += p.Length;
+                if (j >= 20000 || i + 1 == measurements.Length)
                 {
                     _subjectLine.OnNext(lines.ToString());
                     lines.Clear();

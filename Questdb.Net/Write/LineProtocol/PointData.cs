@@ -15,13 +15,14 @@ namespace Questdb.Net.Write
     {
         private static readonly DateTime EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        private readonly ImmutableSortedDictionary<string, string> _tags = ImmutableSortedDictionary<string, string>.Empty;
-        private readonly ImmutableSortedDictionary<string, object> _fields = ImmutableSortedDictionary<string, object>.Empty;
+        private ImmutableSortedDictionary<string, string> _tags = ImmutableSortedDictionary<string, string>.Empty;
+        private ImmutableSortedDictionary<string, object> _fields = ImmutableSortedDictionary<string, object>.Empty;
 
-        public readonly WritePrecision Precision;
+        public WritePrecision Precision;
         public readonly string MeasurementName;
         public string Tags = string.Empty;
-        private readonly BigInteger? _time;
+        public UInt16 Length = 0;
+        private BigInteger? _time;
 
         private PointData(string measurementName)
         {
@@ -41,19 +42,6 @@ namespace Questdb.Net.Write
             return new PointData(measurementName);
         }
 
-        private PointData(string measurementName,
-                            WritePrecision precision,
-                            BigInteger? time,
-                            ImmutableSortedDictionary<string, string> tags,
-                            ImmutableSortedDictionary<string, object> fields)
-        {
-            MeasurementName = measurementName;
-            Precision = precision;
-            _time = time;
-            _tags = tags;
-            _fields = fields;
-        }
-
         /// <summary>
         /// Adds or replaces a tag value for a point.
         /// </summary>
@@ -62,11 +50,10 @@ namespace Questdb.Net.Write
         /// <returns>this</returns>
         public PointData Tag(string name, string value)
         {
-            var isEmptyValue = string.IsNullOrEmpty(value);
-            var tags = _tags;
+            var isEmptyValue = string.IsNullOrWhiteSpace(value);
             if (isEmptyValue)
             {
-                if (tags.ContainsKey(name))
+                if (_tags.ContainsKey(name))
                 {
                     //Trace.TraceWarning($"Empty tags will cause deletion of, tag [{name}], measurement [{MeasurementName}]");
                 }
@@ -76,21 +63,18 @@ namespace Questdb.Net.Write
                     return this;
                 }
             }
-            if (tags.ContainsKey(name))
+            if (_tags.ContainsKey(name))
             {
-                tags = tags.Remove(name);
+                _tags = _tags.Remove(name);
             }
             if (!isEmptyValue)
             {
                 Tags = Tags + value.Replace(" ", "_");
-                tags = tags.Add(name, value.Replace(" ", "_"));
+                _tags = _tags.Add(name, value.Replace(" ", "_"));
+                Length++;
             }
 
-            return new PointData(MeasurementName,
-                                Precision,
-                                _time,
-                                tags,
-                                _fields);
+            return this;
         }
 
         /// <summary>
@@ -178,11 +162,9 @@ namespace Questdb.Net.Write
         /// <returns></returns>
         public PointData Timestamp(long timestamp, WritePrecision timeUnit)
         {
-            return new PointData(MeasurementName,
-                                timeUnit,
-                                timestamp,
-                                _tags,
-                                _fields);
+            _time = timestamp;
+            Precision = timeUnit;
+            return this;
         }
 
         /// <summary>
@@ -210,11 +192,9 @@ namespace Questdb.Net.Write
                     break;
             }
 
-            return new PointData(MeasurementName,
-                                timeUnit,
-                                time,
-                                _tags,
-                                _fields);
+            _time = time;
+            Precision = timeUnit;
+            return this;
         }
 
         /// <summary>
@@ -273,13 +253,9 @@ namespace Questdb.Net.Write
                     time = (timestamp - NodaConstants.UnixEpoch).ToBigIntegerNanoseconds();
                     break;
             }
-
-
-            return new PointData(MeasurementName,
-                                timeUnit,
-                                time,
-                                _tags,
-                                _fields);
+            _time = time;
+            Precision = timeUnit;
+            return this;
         }
 
         /// <summary>
@@ -309,13 +285,9 @@ namespace Questdb.Net.Write
                     time = (timestamp.ToInstant() - NodaConstants.UnixEpoch).ToBigIntegerNanoseconds();
                     break;
             }
-
-
-            return new PointData(MeasurementName,
-                                timeUnit,
-                                time,
-                                _tags,
-                                _fields);
+            _time = time;
+            Precision = timeUnit;
+            return this;
         }
 
         /// <summary>
@@ -353,18 +325,13 @@ namespace Questdb.Net.Write
         {
             Arguments.CheckNonEmptyString(name, "Field name");
 
-            var fields = _fields;
-            if (fields.ContainsKey(name))
+            if (_fields.ContainsKey(name))
             {
-                fields = fields.Remove(name);
+                _fields = _fields.Remove(name);
             }
-            fields = fields.Add(name, value);
-
-            return new PointData(MeasurementName,
-                                Precision,
-                                _time,
-                                _tags,
-                                fields);
+            _fields = _fields.Add(name, value);
+            Length++;
+            return this;
         }
 
         /// <summary>
@@ -649,6 +616,33 @@ namespace Questdb.Net.Write
         public static bool operator !=(PointData left, PointData right)
         {
             return !(left == right);
+        }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
+        public override int GetHashCode()
+        {
+            var hashCode = 318335609;
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(MeasurementName);
+            hashCode = hashCode * -1521134295 + Precision.GetHashCode();
+            hashCode = hashCode * -1521134295 + _time.GetHashCode();
+
+            foreach (var pair in _tags)
+            {
+                hashCode = hashCode * -1521134295 + pair.Key?.GetHashCode() ?? 0;
+                hashCode = hashCode * -1521134295 + pair.Value?.GetHashCode() ?? 0;
+            }
+            foreach (var pair in _fields)
+            {
+                hashCode = hashCode * -1521134295 + pair.Key?.GetHashCode() ?? 0;
+                hashCode = hashCode * -1521134295 + pair.Value?.GetHashCode() ?? 0;
+            }
+
+            return hashCode;
         }
     }
 }
