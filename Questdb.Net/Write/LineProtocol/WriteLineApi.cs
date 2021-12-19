@@ -244,6 +244,9 @@ namespace Questdb.Net.Write
                 //
                 .Select(batchWriteItem =>
                 {
+                //Observable.Start(() => _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
+                //            .ToObservable(), Scheduler.Default))
+                //        .Merge(3 /* at a time */)
                     return Observable
                         .Defer(() =>
                             _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
@@ -310,7 +313,6 @@ namespace Questdb.Net.Write
                     });
 
             #endregion
-
         }
 
         #region write points, line protocol

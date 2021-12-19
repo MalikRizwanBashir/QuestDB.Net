@@ -19,7 +19,7 @@ namespace Questdb.Net.Write
     public class WriteOptions
     {
         private const int DefaultBatchSize = 5000;
-        private const int DefaultFlushInterval = 500;
+        private const int DefaultFlushInterval = 50;
         private const int DefaultJitterInterval = 0;
         private const int DefaultRetryInterval = 100;
         private const int DefaultMaxRetries = 3;
