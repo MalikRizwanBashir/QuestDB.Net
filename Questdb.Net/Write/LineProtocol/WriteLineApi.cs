@@ -33,6 +33,7 @@ namespace Questdb.Net.Write
         private static readonly ObjectPool<StringBuilder> _stringBuilderPool = _objectPoolProvider.CreateStringBuilderPool();
         private readonly IDisposable _unsubscribeDisposeCommand;
         private readonly TcpService _tcpService;
+        private readonly Int16 MaxPointsToProcess = 10000;
 
         public bool Disposed => _disposed;
 
@@ -244,9 +245,9 @@ namespace Questdb.Net.Write
                 //
                 .Select(batchWriteItem =>
                 {
-                //Observable.Start(() => _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
-                //            .ToObservable(), Scheduler.Default))
-                //        .Merge(3 /* at a time */)
+                    //Observable.Start(() => _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
+                    //            .ToObservable(), Scheduler.Default))
+                    //        .Merge(3 /* at a time */)
                     return Observable
                         .Defer(() =>
                             _tcpService.SendAsync(Encoding.UTF8.GetBytes(batchWriteItem))
@@ -333,22 +334,31 @@ namespace Questdb.Net.Write
         /// <param name="points">specifies the Data points to write into database</param>
         public void WritePoints(List<PointData> points)
         {
-            StringBuilder lines = new StringBuilder();
-            UInt16 j = 0;
-            for (int i = 0; i < points.Count; i++)
+            Int16 loop = 1;
+            Int32 processed = 0;
+            if (points.Count > MaxPointsToProcess)
             {
-                var p = points[i];
-                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
-                lines.Append("\n");
-                j += p.Length;
-                if (j >= 20000 || i + 1 == points.Count)
-                {
-                    _subjectLine.OnNext(lines.ToString());
-                    lines.Clear();
-                    j = 0;
-                }
+                loop = (Int16)Math.Ceiling((decimal)points.Count / MaxPointsToProcess);
             }
-            lines.Clear();
+            Parallel.For(0, loop, new ParallelOptions { MaxDegreeOfParallelism = 3 }, (i, state) =>
+            {
+                StringBuilder lines = new StringBuilder();
+                int j = i * MaxPointsToProcess;
+                for (int k = 0; k < MaxPointsToProcess; k++)
+                {
+                    if (j >= points.Count)
+                        break;
+                    var p = points[j];
+                    lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
+                    lines.Append("\n");
+                    j++;
+                    processed++;
+                    if (points.Count == processed)
+                        break;
+                }
+                _subjectLine.OnNext(lines.ToString());
+                lines.Clear();
+            });
         }
 
         /// <summary>
@@ -357,22 +367,31 @@ namespace Questdb.Net.Write
         /// <param name="points">specifies the Data points to write into database</param>
         public void WritePoints(params PointData[] points)
         {
-            StringBuilder lines = new StringBuilder();
-            int j = 0;
-            for (int i = 0; i < points.Length; i++)
+            Int16 loop = 1;
+            Int32 processed = 0;
+            if (points.Length > MaxPointsToProcess)
             {
-                var p = points[i];
-                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
-                lines.Append("\n");
-                j += p.Length;
-                if (j >= 20000 || i + 1 == points.Length)
-                {
-                    _subjectLine.OnNext(lines.ToString());
-                    lines.Clear();
-                    j = 0;
-                }
+                loop = (Int16)Math.Ceiling((decimal)points.Length / MaxPointsToProcess);
             }
-            lines.Clear();
+            Parallel.For(0, loop, new ParallelOptions { MaxDegreeOfParallelism = 3 }, (i, state) =>
+            {
+                StringBuilder lines = new StringBuilder();
+                int j = i * MaxPointsToProcess;
+                for (int k = 0; k < MaxPointsToProcess; k++)
+                {
+                    if (j >= points.Length)
+                        break;
+                    var p = points[j];
+                    lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
+                    lines.Append("\n");
+                    j++;
+                    processed++;
+                    if (points.Length == processed)
+                        break;
+                }
+                _subjectLine.OnNext(lines.ToString());
+                lines.Clear();
+            });
         }
 
         #endregion
@@ -397,22 +416,31 @@ namespace Questdb.Net.Write
         /// <typeparam name="TM">measurement type</typeparam>
         public void WriteMeasurements<TM>(List<TM> measurements)
         {
-            StringBuilder lines = new StringBuilder();
-            UInt16 j = 0;
-            for (int i = 0; i < measurements.Count; i++)
+            Int16 loop = 1;
+            Int32 processed = 0;
+            if (measurements.Count > MaxPointsToProcess)
             {
-                var p = _measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds);
-                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
-                lines.Append("\n");
-                j += p.Length;
-                if (j >= 20000 || i + 1 == measurements.Count)
-                {
-                    _subjectLine.OnNext(lines.ToString());
-                    lines.Clear();
-                    j = 0;
-                }
+                loop = (Int16)Math.Ceiling((decimal)measurements.Count / MaxPointsToProcess);
             }
-            lines.Clear();
+            Parallel.For(0, loop, new ParallelOptions { MaxDegreeOfParallelism = 3 }, (i, state) =>
+            {
+                StringBuilder lines = new StringBuilder();
+                int j = i * MaxPointsToProcess;
+                for (int k = 0; k < MaxPointsToProcess; k++)
+                {
+                    if (j >= measurements.Count)
+                        break;
+                    var p = measurements[j];
+                    lines.Append(_measurementMapper.ToPoint(p, WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                    lines.Append("\n");
+                    j++;
+                    processed++;
+                    if (measurements.Count == processed)
+                        break;
+                }
+                _subjectLine.OnNext(lines.ToString());
+                lines.Clear();
+            });
         }
 
         /// <summary>
@@ -422,22 +450,31 @@ namespace Questdb.Net.Write
         /// <typeparam name="TM">measurement type</typeparam>
         public void WriteMeasurements<TM>(params TM[] measurements)
         {
-            StringBuilder lines = new StringBuilder();
-            UInt16 j = 0;
-            for (int i = 0; i < measurements.Length; i++)
+            Int16 loop = 1;
+            Int32 processed = 0;
+            if (measurements.Length > MaxPointsToProcess)
             {
-                var p = _measurementMapper.ToPoint(measurements[i], WritePrecision.Nanoseconds);
-                lines.Append(p.ToLineProtocol(_clientOptions.PointSettings));
-                lines.Append("\n");
-                j += p.Length;
-                if (j >= 20000 || i + 1 == measurements.Length)
-                {
-                    _subjectLine.OnNext(lines.ToString());
-                    lines.Clear();
-                    j = 0;
-                }
+                loop = (Int16)Math.Ceiling((decimal)measurements.Length / MaxPointsToProcess);
             }
-            lines.Clear();
+            Parallel.For(0, loop, new ParallelOptions { MaxDegreeOfParallelism = 3 }, (i, state) =>
+            {
+                StringBuilder lines = new StringBuilder();
+                int j = i * MaxPointsToProcess;
+                for (int k = 0; k < MaxPointsToProcess; k++)
+                {
+                    if (j >= measurements.Length)
+                        break;
+                    var p = measurements[j];
+                    lines.Append(_measurementMapper.ToPoint(p, WritePrecision.Nanoseconds).ToLineProtocol(_clientOptions.PointSettings));
+                    lines.Append("\n");
+                    j++;
+                    processed++;
+                    if (measurements.Length == processed)
+                        break;
+                }
+                _subjectLine.OnNext(lines.ToString());
+                lines.Clear();
+            });
         }
 
         #endregion
