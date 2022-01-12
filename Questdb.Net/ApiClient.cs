@@ -55,8 +55,12 @@ namespace Questdb.Net
 
             var timeoutTotalMilliseconds = (int)options.Timeout.TotalMilliseconds;
             var totalMilliseconds = (int)options.ReadWriteTimeout.TotalMilliseconds;
-
-            RestClient = new RestClient(options.Url + ":9000");
+            var serverBaseAddress = new Uri(options.Url);
+            var host = serverBaseAddress.Host;
+            IPAddress ipAddress = Dns.GetHostEntry(host).AddressList[0];
+            var url = options.Url;
+            url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
+            RestClient = new RestClient(url + ":9000");
             RestClient.AutomaticDecompression = false;
         }
 
