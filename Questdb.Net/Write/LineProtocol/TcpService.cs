@@ -20,6 +20,7 @@ namespace Questdb.Net.Client
             var serverBaseAddress = new Uri(url);
             _tcpHostName = serverBaseAddress.Host;
             _tcpPort = port;
+            GetClient();
         }
 
         private TcpClient GetClient()
@@ -49,6 +50,7 @@ namespace Questdb.Net.Client
             }
             catch (Exception ex)
             {
+                stream.Close();
                 if (_tcpClient.Connected)
                     _tcpClient.Close();
                 _tcpClient.Dispose();

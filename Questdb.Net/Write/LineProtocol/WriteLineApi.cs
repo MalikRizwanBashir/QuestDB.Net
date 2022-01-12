@@ -294,7 +294,7 @@ namespace Questdb.Net.Write
                                 Log.Debug($"The batch item: {notification} was processed successfully.");
                                 break;
                             case NotificationKind.OnError:
-                                Log.Debug(
+                                Log.Error(
                                     $"The batch item wasn't processed successfully because: {notification.Exception}");
                                 break;
                             default:
