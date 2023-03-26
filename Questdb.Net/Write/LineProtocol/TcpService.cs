@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,9 +29,17 @@ namespace Questdb.Net.Client
             if (_tcpClient == null || !_tcpClient.Connected)
             {
                 _tcpClient = new TcpClient();
-                IPAddress ipAddress = Dns.GetHostEntry(_tcpHostName).AddressList[0];
-                IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, _tcpPort);
-
+                IPEndPoint ipEndPoint;
+                if (IPAddress.TryParse(_tcpHostName, out IPAddress parsedAddress))
+                {
+                    // The host name is a valid IP address
+                    ipEndPoint = new IPEndPoint(parsedAddress, _tcpPort);
+                }
+                else
+                {
+                    IPAddress ipAddress = Dns.GetHostEntry(_tcpHostName).AddressList[0];
+                    ipEndPoint = new IPEndPoint(ipAddress, _tcpPort);
+                }
                 _tcpClient.Connect(ipEndPoint);
             }
             return _tcpClient;
