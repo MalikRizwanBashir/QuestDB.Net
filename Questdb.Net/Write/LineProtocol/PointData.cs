@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
-using System.IO;
 using System.Numerics;
 using System.Text;
 using NodaTime;
@@ -15,14 +13,47 @@ namespace Questdb.Net.Write
     {
         private static readonly DateTime EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        private ImmutableSortedDictionary<string, string> _tags = ImmutableSortedDictionary<string, string>.Empty;
+        private ImmutableSortedDictionary<string, object> _tags = ImmutableSortedDictionary<string, object>.Empty;
         private ImmutableSortedDictionary<string, object> _fields = ImmutableSortedDictionary<string, object>.Empty;
 
         public WritePrecision Precision;
         public readonly string MeasurementName;
-        public string Tags = string.Empty;
         public UInt16 Length = 0;
         private BigInteger? _time;
+
+        public PointData(string measurementName, long timestamp, IReadOnlyDictionary<string, object> tags, IReadOnlyDictionary<string, object> fields)
+        {
+            _time = timestamp;
+            MeasurementName = measurementName;
+            Tags(tags);
+            Fields(fields);
+        }
+
+        public PointData(string measurementName, Instant timestamp, IReadOnlyDictionary<string, object> tags, IReadOnlyDictionary<string, object> fields)
+        {
+            _time = PrivateTimestamp(timestamp, WritePrecision.Nanoseconds);
+            MeasurementName = measurementName;
+            Tags(tags);
+            Fields(fields);
+        }
+
+        public PointData(string measurementName, DateTimeOffset timestamp, IReadOnlyDictionary<string, object> tags, IReadOnlyDictionary<string, object> fields)
+        {
+            var timeSpan = timestamp.Subtract(EpochStart);
+            _time = PrivateTimestamp(timeSpan, WritePrecision.Nanoseconds);
+            MeasurementName = measurementName;
+            Tags(tags);
+            Fields(fields);
+        }
+
+        public PointData(string measurementName, DateTime timestamp, IReadOnlyDictionary<string, object> tags, IReadOnlyDictionary<string, object> fields)
+        {
+            var timeSpan = timestamp.Subtract(EpochStart);
+            _time = PrivateTimestamp(timeSpan, WritePrecision.Nanoseconds);
+            MeasurementName = measurementName;
+            Tags(tags);
+            Fields(fields);
+        }
 
         private PointData(string measurementName)
         {
@@ -40,6 +71,30 @@ namespace Questdb.Net.Write
         public static PointData Measurement(string measurementName)
         {
             return new PointData(measurementName);
+        }
+
+        /// <summary>
+        /// Adds or replaces a tag value for a point.
+        /// </summary>
+        /// <param name="name">the tag name</param>
+        /// <param name="value">the tag value</param>
+        /// <returns>this</returns>
+        public PointData Tags(IReadOnlyDictionary<string, object> tags)
+        {
+            foreach (var tag in tags)
+            {
+                if (string.IsNullOrWhiteSpace(tag.Key))
+                    continue;
+                if (tag.Value == null)
+                    continue;
+                if (_tags.ContainsKey(tag.Key))
+                {
+                    _tags = _tags.Remove(tag.Key);
+                }
+                _tags = _tags.Add(tag.Key, tag.Value);
+                Length++;
+            }
+            return this;
         }
 
         /// <summary>
@@ -69,11 +124,30 @@ namespace Questdb.Net.Write
             }
             if (!isEmptyValue)
             {
-                Tags = Tags + value.Replace(" ", "_");
                 _tags = _tags.Add(name, value.Replace(" ", "_"));
                 Length++;
             }
 
+            return this;
+        }
+
+        /// <summary>
+        /// Add all fields at once.
+        /// </summary>
+        /// <param name="name">the field name</param>
+        /// <param name="value">the field value</param>
+        /// <returns>this</returns>
+        public PointData Fields(IReadOnlyDictionary<string, object> fields)
+        {
+            foreach (var field in fields)
+            {
+                if (_fields.ContainsKey(field.Key))
+                {
+                    _fields = _fields.Remove(field.Key);
+                }
+                _fields = _fields.Add(field.Key, field.Value);
+                Length++;
+            }
             return this;
         }
 
@@ -175,24 +249,7 @@ namespace Questdb.Net.Write
         /// <returns></returns>
         public PointData Timestamp(TimeSpan timestamp, WritePrecision timeUnit)
         {
-            BigInteger? time = null;
-            switch (timeUnit)
-            {
-                case WritePrecision.Nanoseconds:
-                    time = timestamp.Ticks * 100;
-                    break;
-                case WritePrecision.Microseconds:
-                    time = (BigInteger)(timestamp.Ticks * 0.1);
-                    break;
-                case WritePrecision.Milliseconds:
-                    time = (BigInteger)timestamp.TotalMilliseconds;
-                    break;
-                case WritePrecision.Seconds:
-                    time = (BigInteger)timestamp.TotalSeconds;
-                    break;
-            }
-
-            _time = time;
+            _time = PrivateTimestamp(timestamp, timeUnit);
             Precision = timeUnit;
             return this;
         }
@@ -234,29 +291,11 @@ namespace Questdb.Net.Write
         /// <returns></returns>
         public PointData Timestamp(Instant timestamp, WritePrecision timeUnit)
         {
-            BigInteger? time = null;
-            switch (timeUnit)
-            {
-                case WritePrecision.Seconds:
-                    time = timestamp.ToUnixTimeSeconds();
-                    break;
-                case WritePrecision.Milliseconds:
-                    time = timestamp.ToUnixTimeMilliseconds();
-                    break;
-                case WritePrecision.Microseconds:
-                    time = (long)(timestamp.ToUnixTimeTicks() * 0.1);
-                    break;
-                case WritePrecision.Nanoseconds:
-                    time = (long)(timestamp.ToUnixTimeTicks() * 0.1);
-                    break;
-                default:
-                    time = (timestamp - NodaConstants.UnixEpoch).ToBigIntegerNanoseconds();
-                    break;
-            }
-            _time = time;
+            _time = PrivateTimestamp(timestamp, timeUnit);
             Precision = timeUnit;
             return this;
         }
+
 
         /// <summary>
         /// Updates the timestamp for the point represented by <see cref="Instant"/>.
@@ -341,7 +380,7 @@ namespace Questdb.Net.Write
         /// <param name="pointSettings">The point settings.</param>
         private void AppendTags(StringBuilder writer, PointSettings pointSettings)
         {
-            IReadOnlyDictionary<string, string> entries;
+            IReadOnlyDictionary<string, object> entries;
 
             if (pointSettings == null)
             {
@@ -349,7 +388,7 @@ namespace Questdb.Net.Write
             }
             else
             {
-                IReadOnlyDictionary<string, string> defaultTags =
+                IReadOnlyDictionary<string, object> defaultTags =
                     pointSettings.GetDefaultTags();
                 try
                 {
@@ -377,15 +416,9 @@ namespace Questdb.Net.Write
                 var key = keyValue.Key;
                 var value = keyValue.Value;
 
-                if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(value))
-                {
-                    continue;
-                }
-
                 writer.Append(',');
                 EscapeKey(writer, key);
                 writer.Append('=');
-                EscapeKey(writer, value);
             }
 
             writer.Append(' ');
@@ -643,6 +676,51 @@ namespace Questdb.Net.Write
             }
 
             return hashCode;
+        }
+
+        private static long? PrivateTimestamp(Instant timestamp, WritePrecision timeUnit)
+        {
+            long? time = null;
+            switch (timeUnit)
+            {
+                case WritePrecision.Seconds:
+                    time = timestamp.ToUnixTimeSeconds();
+                    break;
+                case WritePrecision.Milliseconds:
+                    time = timestamp.ToUnixTimeMilliseconds();
+                    break;
+                case WritePrecision.Microseconds:
+                    time = (long)(timestamp.ToUnixTimeTicks() * 0.1);
+                    break;
+                case WritePrecision.Nanoseconds:
+                    time = (long)(timestamp.ToUnixTimeTicks() * 0.1);
+                    break;
+                default:
+                    time = (timestamp - NodaConstants.UnixEpoch).ToInt64Nanoseconds();
+                    break;
+            }
+            return time;
+        }
+
+        private static long? PrivateTimestamp(TimeSpan timestamp, WritePrecision timeUnit)
+        {
+            long? time = null;
+            switch (timeUnit)
+            {
+                case WritePrecision.Nanoseconds:
+                    time = timestamp.Ticks * 100;
+                    break;
+                case WritePrecision.Microseconds:
+                    time = (long)(timestamp.Ticks * 0.1);
+                    break;
+                case WritePrecision.Milliseconds:
+                    time = (long)timestamp.TotalMilliseconds;
+                    break;
+                case WritePrecision.Seconds:
+                    time = (long)timestamp.TotalSeconds;
+                    break;
+            }
+            return time;
         }
     }
 }

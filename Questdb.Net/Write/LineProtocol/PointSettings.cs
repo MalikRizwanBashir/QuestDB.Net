@@ -44,7 +44,7 @@ namespace Questdb.Net.Write
         /// Get default tags with evaluated expressions.
         /// </summary>
         /// <returns>evaluated default tags</returns>
-        internal Dictionary<string, string> GetDefaultTags()
+        internal Dictionary<string, object> GetDefaultTags()
         {
             string Evaluation(string expression)
             {
@@ -69,8 +69,8 @@ namespace Questdb.Net.Write
             }
 
             return _defaultTags
-                .Select(it => new KeyValuePair<string, string>(it.Key, Evaluation(it.Value)))
-                .Where(it => !string.IsNullOrEmpty(it.Value))
+                .Select(it => new KeyValuePair<string, object>(it.Key, Evaluation(it.Value)))
+                .Where(it => it.Value != null)
                 .ToDictionary(it => it.Key, it => it.Value, StringComparer.Ordinal);
         }
     }
