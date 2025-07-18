@@ -419,6 +419,7 @@ namespace Questdb.Net.Write
                 writer.Append(',');
                 EscapeKey(writer, key);
                 writer.Append('=');
+                EscapeKey(writer, Convert.ToString(value));
             }
 
             writer.Append(' ');
