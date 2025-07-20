@@ -1,10 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Questdb.Net.Write;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Questdb.Net
 {
@@ -43,5 +38,60 @@ namespace Questdb.Net
         {
             serviceCollection.AddTransient<IQuestDBClient>(opt => new QuestDBClient(host, writeOptions));
         }
+
+
+        #region Keyed Repositories
+
+        /// <summary>
+        /// Load configurations from configuration file using key "questdb"
+        /// </summary>
+        public static void AddKeyedQuestDb(this IServiceCollection serviceCollection, string key)
+        {
+            serviceCollection.AddKeyedTransient<IQuestDBClient>(key, (sp, _) =>
+            {
+                var client = new QuestDBClient();
+                return client;
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="host">Server URL(IP)</param>
+        public static void AddKeyedQuestDb(this IServiceCollection serviceCollection, string key, string host)
+        {
+            serviceCollection.AddKeyedTransient<IQuestDBClient>(key, (sp, _) =>
+            {
+                var client = new QuestDBClient(host);
+                return client;
+            });
+        }
+
+        /// <summary>
+        /// Load configurations from configuration file using key "questdb"
+        /// </summary>
+        public static void AddKeyedQuestDb(this IServiceCollection serviceCollection, string key, WriteOptions writeOptions)
+        {
+            serviceCollection.AddKeyedTransient<IQuestDBClient>(key, (sp, _) =>
+            {
+                var client = new QuestDBClient(writeOptions);
+                return client;
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="host">Server URL(IP)</param>
+        public static void AddKeyedQuestDb(this IServiceCollection serviceCollection, string key, string host, WriteOptions writeOptions)
+        {
+            serviceCollection.AddKeyedTransient<IQuestDBClient>(key, (sp, _) =>
+            {
+                var client = new QuestDBClient(host, writeOptions);
+                return client;
+            });
+        }
+
+        #endregion Keyed Repositories
     }
 }
