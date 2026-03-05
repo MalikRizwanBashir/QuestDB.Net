@@ -28,15 +28,17 @@ namespace Questdb.Net.Write
             }
         }
 
-        internal static void WaitToCondition(Func<bool> condition, int millis)
+        internal static void WaitToCondition(Func<bool> condition, int timeoutMillis)
         {
-            var start = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            var sw = Stopwatch.StartNew();
+
             while (!condition())
             {
-                Thread.Sleep(25);
-                if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - start > millis)
+                Task.Delay(25).GetAwaiter().GetResult();
+
+                if (sw.ElapsedMilliseconds > timeoutMillis)
                 {
-                    Log.Error($"The WriteApi can't be gracefully dispose! - {millis}ms elapsed.");
+                    Log.Error($"The WriteApi can't be gracefully disposed! - {timeoutMillis}ms elapsed.");
                     break;
                 }
             }

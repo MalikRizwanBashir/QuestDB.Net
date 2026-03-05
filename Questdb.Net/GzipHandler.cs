@@ -30,74 +30,54 @@ namespace Questdb.Net
             return _enabled;
         }
 
-        public void BeforeIntercept(IRestRequest request)
+        public void BeforeIntercept(RestRequest request)
         {
             if (!_enabled)
             {
-                //
-                // Disabled
-                //
-                request.AddOrUpdateParameter("Accept-Encoding", "identity", ParameterType.HttpHeader);
-                request.AddDecompressionMethod(DecompressionMethods.None);
+                request.AddOrUpdateHeader("Accept-Encoding", "identity");
             }
-            else if (request.Method == Method.POST)
+            else if (request.Method == Method.Post)
             {
-                //
-                // GZIP request
-                //
-                request.AddOrUpdateParameter("Content-Encoding", "gzip", ParameterType.HttpHeader);
-                request.AddOrUpdateParameter("Accept-Encoding", "identity", ParameterType.HttpHeader);
-                request.AddDecompressionMethod(DecompressionMethods.None);
+                request.AddOrUpdateHeader("Content-Encoding", "gzip");
+                request.AddOrUpdateHeader("Accept-Encoding", "identity");
 
-                var body = request.Parameters.FirstOrDefault(parameter =>
-                    parameter.Type.Equals(ParameterType.RequestBody));
+                var bodyParam = request.Parameters.FirstOrDefault(p => p.Type == ParameterType.RequestBody);
 
-                if (body != null)
+                if (bodyParam != null && bodyParam.Value is string bodyValue)
                 {
-                    byte[] bytes;
+                    var compressedBytes = CompressString(bodyValue);
 
-                    if (body.Value is byte[])
-                    {
-                        bytes = (byte[])body.Value;
-                    }
-                    else
-                    {
-                        bytes = Encoding.UTF8.GetBytes(body.Value.ToString());
-                    }
-
-                    using (var msi = new MemoryStream(bytes))
-                    using (var mso = new MemoryStream())
-                    {
-                        using (var gs = new GZipStream(mso, CompressionMode.Compress))
-                        {
-                            msi.CopyTo(gs);
-                        }
-
-                        body.Value = mso.ToArray();
-                        body.Name = "application/x-gzip";
-                    }
+                    // Log warning: body cannot be replaced here directly
+                    throw new InvalidOperationException("Body replacement is not supported after being added in RestSharp 107+. Compress the body before adding to the request.");
                 }
             }
-            else if (request.Method == Method.GET)
+            else if (request.Method == Method.Get)
             {
-                //
-                // GZIP response
-                //
-                request.AddDecompressionMethod(DecompressionMethods.GZip);
+                request.AddOrUpdateHeader("Accept-Encoding", "gzip");
             }
             else
             {
-                //
-                // Disabled
-                //
-                request.AddOrUpdateParameter("Accept-Encoding", "identity", ParameterType.HttpHeader);
-                request.AddDecompressionMethod(DecompressionMethods.None);
+                request.AddOrUpdateHeader("Accept-Encoding", "identity");
             }
         }
 
-        public object AfterIntercept(int statusCode, Func<IList<HttpHeader>> headers, object body)
+        private static byte[] CompressString(string input)
+        {
+            var inputBytes = Encoding.UTF8.GetBytes(input);
+            using var outputStream = new MemoryStream();
+            using (var gzip = new GZipStream(outputStream, CompressionMode.Compress))
+            {
+                gzip.Write(inputBytes, 0, inputBytes.Length);
+            }
+            return outputStream.ToArray();
+        }
+
+
+        public object AfterIntercept(int statusCode, Func<IList<HeaderParameter>> headers, object body)
         {
             return body;
         }
+
+
     }
 }

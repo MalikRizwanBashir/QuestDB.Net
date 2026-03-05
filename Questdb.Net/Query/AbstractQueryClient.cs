@@ -1,16 +1,17 @@
+using Newtonsoft.Json.Linq;
+using Questdb.Net.Exceptions;
+using Questdb.Net.Query;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using Questdb.Net.Exceptions;
-using Questdb.Net.Query;
-using RestSharp;
 
 namespace Questdb.Net.Query
 {
@@ -31,7 +32,7 @@ namespace Questdb.Net.Query
             RestClient = restClient;
         }
 
-        protected async Task<IRestResponse> QueryAsync(RestRequest query)
+        protected async Task<RestResponse> QueryAsync(RestRequest query)
         {
             Arguments.CheckNotNull(query, nameof(query));
 
@@ -40,7 +41,7 @@ namespace Questdb.Net.Query
             return await RestClient.ExecuteAsync(query);
         }
 
-        protected IRestResponse Query(RestRequest query)
+        protected RestResponse Query(RestRequest query)
         {
             Arguments.CheckNotNull(query, nameof(query));
 
@@ -110,13 +111,12 @@ namespace Questdb.Net.Query
             await QueryAsync(query, Consumer, onError, onComplete);
         }
 
-        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer,
-            Action<Exception> onError, Action onComplete)
+        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer, Action<Exception> onError, Action onComplete)
         {
-            Arguments.CheckNotNull(query, "query");
-            Arguments.CheckNotNull(consumer, "consumer");
-            Arguments.CheckNotNull(onError, "onError");
-            Arguments.CheckNotNull(onComplete, "onComplete");
+            Arguments.CheckNotNull(query, nameof(query));
+            Arguments.CheckNotNull(consumer, nameof(consumer));
+            Arguments.CheckNotNull(onError, nameof(onError));
+            Arguments.CheckNotNull(onComplete, nameof(onComplete));
 
             try
             {
@@ -124,15 +124,13 @@ namespace Questdb.Net.Query
 
                 BeforeIntercept(query);
 
-                query.AdvancedResponseWriter = (responseStream, response) =>
-                {
-                    //responseStream = AfterIntercept((int)response.StatusCode, () => response.Headers, responseStream);
+                var response = await RestClient.ExecuteAsync(query, CancellationToken.None);
 
-                    RaiseForIfError(response, responseStream);
-                    consumer(cancellable, responseStream);
-                };
+                using var responseStream = new MemoryStream(response.RawBytes ?? Array.Empty<byte>());
 
-                await Task.Run(() => { RestClient.DownloadData(query, true); });
+                RaiseForIfError(response, responseStream);
+                consumer(cancellable, responseStream);
+
                 if (!cancellable.IsCancelled())
                 {
                     onComplete();
@@ -144,30 +142,11 @@ namespace Questdb.Net.Query
             }
         }
 
-        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer,
-            Action onComplete)
+        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer, Action onComplete)
         {
-            void Consumer(ICancellable cancellable, Stream bufferedStream)
-            {
-                try
-                {
-                    _csvParser.ParseCSVResponse(bufferedStream, cancellable, responseConsumer);
-                }
-                catch (IOException e)
-                {
-                    throw new QuestdbException(e);
-                }
-            }
-
-            await QueryAsync(query, Consumer, onComplete);
-        }
-
-        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer,
-            Action onComplete)
-        {
-            Arguments.CheckNotNull(query, "query");
-            Arguments.CheckNotNull(consumer, "consumer");
-            Arguments.CheckNotNull(onComplete, "onComplete");
+            Arguments.CheckNotNull(query, nameof(query));
+            Arguments.CheckNotNull(consumer, nameof(consumer));
+            Arguments.CheckNotNull(onComplete, nameof(onComplete));
 
             try
             {
@@ -175,15 +154,13 @@ namespace Questdb.Net.Query
 
                 BeforeIntercept(query);
 
-                query.AdvancedResponseWriter = (responseStream, response) =>
-                {
-                    //responseStream = AfterIntercept((int)response.StatusCode, () => response.Headers, responseStream);
+                var response = await RestClient.ExecuteAsync(query, CancellationToken.None);
 
-                    RaiseForIfError(response, responseStream);
-                    consumer(cancellable, responseStream);
-                };
+                using var responseStream = new MemoryStream(response.RawBytes ?? Array.Empty<byte>());
 
-                await Task.Run(() => { RestClient.DownloadData(query, true); });
+                RaiseForIfError(response, responseStream);
+                consumer(cancellable, responseStream);
+
                 if (!cancellable.IsCancelled())
                 {
                     onComplete();
@@ -195,11 +172,88 @@ namespace Questdb.Net.Query
             }
         }
 
-
-        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer,
-            Action<Exception> onError)
+        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer, Action<Exception> onError)
         {
-            void Consumer(ICancellable cancellable, Stream bufferedStream)
+            Arguments.CheckNotNull(query, nameof(query));
+            Arguments.CheckNotNull(consumer, nameof(consumer));
+            Arguments.CheckNotNull(onError, nameof(onError));
+
+            try
+            {
+                var cancellable = new DefaultCancellable();
+
+                BeforeIntercept(query);
+
+                var response = await RestClient.ExecuteAsync(query, CancellationToken.None);
+
+                using var responseStream = new MemoryStream(response.RawBytes ?? Array.Empty<byte>());
+
+                RaiseForIfError(response, responseStream);
+                consumer(cancellable, responseStream);
+            }
+            catch (Exception e)
+            {
+                onError(e);
+            }
+        }
+
+        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer)
+        {
+            Arguments.CheckNotNull(query, nameof(query));
+            Arguments.CheckNotNull(consumer, nameof(consumer));
+
+            try
+            {
+                var cancellable = new DefaultCancellable();
+
+                BeforeIntercept(query);
+
+                var response = await RestClient.ExecuteAsync(query, CancellationToken.None);
+
+                using var responseStream = new MemoryStream(response.RawBytes ?? Array.Empty<byte>());
+
+                RaiseForIfError(response, responseStream);
+                consumer(cancellable, responseStream);
+            }
+            catch (Exception e)
+            {
+                throw new QuestdbException(e);
+            }
+        }
+
+        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer)
+        {
+            await QueryAsync(query, (cancellable, bufferedStream) =>
+            {
+                try
+                {
+                    _csvParser.ParseCSVResponse(bufferedStream, cancellable, responseConsumer);
+                }
+                catch (IOException e)
+                {
+                    throw new QuestdbException(e);
+                }
+            });
+        }
+
+        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer, Action onComplete)
+        {
+            await QueryAsync(query, (cancellable, bufferedStream) =>
+            {
+                try
+                {
+                    _csvParser.ParseCSVResponse(bufferedStream, cancellable, responseConsumer);
+                }
+                catch (IOException e)
+                {
+                    throw new QuestdbException(e);
+                }
+            }, onComplete);
+        }
+
+        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer, Action<Exception> onError)
+        {
+            await QueryAsync(query, (cancellable, bufferedStream) =>
             {
                 try
                 {
@@ -209,83 +263,9 @@ namespace Questdb.Net.Query
                 {
                     onError(e);
                 }
-            }
-
-            await QueryAsync(query, Consumer, onError);
+            }, onError);
         }
 
-        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer,
-            Action<Exception> onError)
-        {
-            Arguments.CheckNotNull(query, "query");
-            Arguments.CheckNotNull(consumer, "consumer");
-            Arguments.CheckNotNull(onError, "onError");
-
-            try
-            {
-                var cancellable = new DefaultCancellable();
-
-                BeforeIntercept(query);
-
-                query.AdvancedResponseWriter = (responseStream, response) =>
-                {
-                    //responseStream = AfterIntercept((int)response.StatusCode, () => response.Headers, responseStream);
-
-                    RaiseForIfError(response, responseStream);
-                    consumer(cancellable, responseStream);
-                };
-
-                await Task.Run(() => { RestClient.DownloadData(query, true); });
-            }
-            catch (Exception e)
-            {
-                onError(e);
-            }
-        }
-
-        protected async Task QueryAsync(RestRequest query, QuestCsvParser.ICSVResponseConsumer responseConsumer)
-        {
-            void Consumer(ICancellable cancellable, Stream bufferedStream)
-            {
-                try
-                {
-                    _csvParser.ParseCSVResponse(bufferedStream, cancellable, responseConsumer);
-                }
-                catch (IOException e)
-                {
-                    throw new QuestdbException(e);
-                }
-            }
-
-            await QueryAsync(query, Consumer);
-        }
-
-        protected async Task QueryAsync(RestRequest query, Action<ICancellable, Stream> consumer)
-        {
-            Arguments.CheckNotNull(query, "query");
-            Arguments.CheckNotNull(consumer, "consumer");
-
-            try
-            {
-                var cancellable = new DefaultCancellable();
-
-                BeforeIntercept(query);
-
-                query.AdvancedResponseWriter = (responseStream, response) =>
-                {
-                    //responseStream = AfterIntercept((int)response.StatusCode, () => response.Headers, responseStream);
-
-                    RaiseForIfError(response, responseStream);
-                    consumer(cancellable, responseStream);
-                };
-
-                await Task.Run(() => { RestClient.DownloadData(query, true); });
-            }
-            catch (Exception e)
-            {
-                throw new QuestdbException(e);
-            }
-        }
 
 
         protected abstract void BeforeIntercept(RestRequest query);
@@ -322,7 +302,7 @@ namespace Questdb.Net.Query
                 }
             }
 
-            if (result is IRestResponse restResponse)
+            if (result is RestResponse restResponse)
             {
                 if (restResponse.IsSuccessful) return;
 
@@ -334,7 +314,7 @@ namespace Questdb.Net.Query
                 throw HttpException.Create(restResponse, body);
             }
 
-            var httpResponse = (IHttpResponse)result;
+            var httpResponse = (RestResponse)result;
             if ((int)httpResponse.StatusCode >= 200 && (int)httpResponse.StatusCode < 300)
             {
                 return;

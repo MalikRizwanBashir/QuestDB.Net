@@ -1,11 +1,12 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using RestSharp;
+using System.Net.Http.Headers;
 
 namespace Questdb.Net.Exceptions
 {
@@ -49,17 +50,19 @@ namespace Questdb.Net.Exceptions
             Status = status;
         }
 
+        public int Status { get; set; }
+
         /// <summary>
-        ///     The JSON unsuccessful response body.
+        /// The JSON unsuccessful response body.
         /// </summary>
         public JObject ErrorBody { get; set; }
 
         /// <summary>
-        ///     The retry interval is used when the QuestDB server does not specify "Retry-After" header.
+        /// The retry interval is used when the QuestDB server does not specify "Retry-After" header.
         /// </summary>
         public int? RetryAfter { get; set; }
 
-        public static HttpException Create(IRestResponse requestResult, object body)
+        public static HttpException Create(RestResponse requestResult, object body)
         {
             Arguments.CheckNotNull(requestResult, nameof(requestResult));
 
@@ -69,33 +72,26 @@ namespace Questdb.Net.Exceptions
                 requestResult.ErrorException);
         }
 
-        public static HttpException Create(IHttpResponse requestResult, object body)
-        {
-            Arguments.CheckNotNull(requestResult, nameof(requestResult));
 
-            return Create(body, requestResult.Headers, requestResult.ErrorMessage, requestResult.StatusCode,
-                requestResult.ErrorException);
-        }
-
-        public static HttpException Create(object content, IList<HttpHeader> headers, string ErrorMessage,
+        public static HttpException Create(object content, IList<HttpHeader> headers, string errorMessage,
             HttpStatusCode statusCode, Exception exception = null)
         {
             string stringBody = null;
             var errorBody = new JObject();
-            string errorMessage = null;
-
+            string resolvedMessage = null;
             int? retryAfter = null;
+
+            var retryHeader = headers?.FirstOrDefault(header => header.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase));
+            if (retryHeader != null && int.TryParse(retryHeader.Value.ToString(), out int retryValue))
             {
-                var retryHeader = headers.FirstOrDefault(header => header.Name.Equals("Retry-After"));
-                if (retryHeader != null) retryAfter = Convert.ToInt32(retryHeader.Value);
+                retryAfter = retryValue;
             }
 
             if (content != null)
             {
-                if (content is Stream)
+                if (content is Stream stream)
                 {
-                    var stream = content as Stream;
-                    var sr = new StreamReader(stream);
+                    using var sr = new StreamReader(stream);
                     stringBody = sr.ReadToEnd();
                 }
                 else
@@ -111,7 +107,7 @@ namespace Questdb.Net.Exceptions
                     errorBody = JObject.Parse(stringBody);
                     if (errorBody.ContainsKey("message"))
                     {
-                        errorMessage = errorBody.GetValue("message").ToString();
+                        resolvedMessage = errorBody.GetValue("message")?.ToString();
                     }
                 }
                 catch (JsonException)
@@ -121,25 +117,41 @@ namespace Questdb.Net.Exceptions
             }
 
             var keys = new[] { "X-Platform-Error-Code", "X-Quest-Error", "X-QuestDb-Error" };
+            if (string.IsNullOrEmpty(resolvedMessage))
+            {
+                resolvedMessage = headers?
+                    .FirstOrDefault(header => keys.Contains(header.Name, StringComparer.OrdinalIgnoreCase))
+                    ?.Value?.ToString();
+            }
 
-            if (string.IsNullOrEmpty(errorMessage))
-                errorMessage = headers
-                    .Where(header => keys.Contains(header.Name, StringComparer.OrdinalIgnoreCase))
-                    .Select(header => header.Value.ToString()).FirstOrDefault();
+            if (string.IsNullOrEmpty(resolvedMessage)) resolvedMessage = errorMessage;
+            if (string.IsNullOrEmpty(resolvedMessage)) resolvedMessage = stringBody;
 
-            if (string.IsNullOrEmpty(errorMessage)) errorMessage = ErrorMessage;
-            if (string.IsNullOrEmpty(errorMessage)) errorMessage = stringBody;
-
-            return new HttpException(errorMessage, (int)statusCode, exception)
-            { ErrorBody = errorBody, RetryAfter = retryAfter };
+            return new HttpException(resolvedMessage, (int)statusCode, exception)
+            {
+                ErrorBody = errorBody,
+                RetryAfter = retryAfter
+            };
         }
 
-        public static List<HttpHeader> ToHeaders(IList<Parameter> parameters, ParameterType type = ParameterType.HttpHeader)
+        public static List<HttpHeader> ToHeaders(IEnumerable<HeaderParameter> parameters)
         {
             return parameters
-                .Where(parameter => parameter.Type.Equals(type))
-                .Select(h => new HttpHeader(h.Name, h.Value.ToString()))
+                .Select(h => new HttpHeader(h.Name, h.Value?.ToString()))
                 .ToList();
         }
     }
+
+    public class HttpHeader
+    {
+        public string Name { get; }
+        public string Value { get; }
+
+        public HttpHeader(string name, string value)
+        {
+            Name = name;
+            Value = value;
+        }
+    }
+
 }

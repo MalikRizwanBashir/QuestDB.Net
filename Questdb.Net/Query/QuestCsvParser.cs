@@ -213,12 +213,19 @@ namespace Questdb.Net.Query
 
         private void AddColumnNames(QuestdbResponse table, CsvReader columnNames)
         {
-            Arguments.CheckNotNull(table, "table");
-            Arguments.CheckNotNull(columnNames, "columnNames");
+            Arguments.CheckNotNull(table, nameof(table));
+            Arguments.CheckNotNull(columnNames, nameof(columnNames));
 
-            for (var index = 0; index < columnNames.Context.Record.Length; index++)
+            if (!columnNames.Read())
             {
-                var name = columnNames[index];
+                throw new InvalidOperationException("CSV data is empty; cannot read column names.");
+            }
+
+            var fieldCount = columnNames.Parser.Count; // Number of fields in current row
+
+            for (var index = 0; index < fieldCount; index++)
+            {
+                var name = columnNames.GetField(index);
 
                 if (string.IsNullOrEmpty(name))
                 {
@@ -234,5 +241,6 @@ namespace Questdb.Net.Query
                 table.Columns.Add(columnDef);
             }
         }
+
     }
 }
